@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.expensetracker.app-mergeDebugResources-44:/values-ml/values-ml.xml",
+            "outputFile": "com.example.expensetracker.app-mergeDebugResources-48:/values-ml/values-ml.xml",
             "map": [
                 {
                     "source": "C:\\Users\\emman\\.gradle\\caches\\9.5.0\\transforms\\3b41797a8e3cdf5e1141fdd835c6f3ed\\transformed\\ui\\res\\values-ml\\values-ml.xml",

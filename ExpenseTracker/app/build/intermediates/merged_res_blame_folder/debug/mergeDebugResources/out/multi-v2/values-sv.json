@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.expensetracker.app-mergeDebugResources-44:/values-sv/values-sv.xml",
+            "outputFile": "com.example.expensetracker.app-mergeDebugResources-48:/values-sv/values-sv.xml",
             "map": [
                 {
                     "source": "C:\\Users\\emman\\.gradle\\caches\\9.5.0\\transforms\\4439f0dc06aed901c95dc652e1009990\\transformed\\play-services-basement-18.4.0\\res\\values-sv\\values.xml",

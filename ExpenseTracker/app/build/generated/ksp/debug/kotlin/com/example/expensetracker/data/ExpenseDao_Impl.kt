@@ -139,6 +139,9 @@ public class ExpenseDao_Impl(
     Category.HEALTH -> "HEALTH"
     Category.EDUCATION -> "EDUCATION"
     Category.ENTERTAINMENT -> "ENTERTAINMENT"
+    Category.PEER_DEBTS -> "PEER_DEBTS"
+    Category.HELB_INCOME -> "HELB_INCOME"
+    Category.FEES -> "FEES"
     Category.OTHER -> "OTHER"
   }
 
@@ -157,6 +160,9 @@ public class ExpenseDao_Impl(
     "HEALTH" -> Category.HEALTH
     "EDUCATION" -> Category.EDUCATION
     "ENTERTAINMENT" -> Category.ENTERTAINMENT
+    "PEER_DEBTS" -> Category.PEER_DEBTS
+    "HELB_INCOME" -> Category.HELB_INCOME
+    "FEES" -> Category.FEES
     "OTHER" -> Category.OTHER
     else -> throw IllegalArgumentException("Can't convert value to enum, unknown value: " + _value)
   }

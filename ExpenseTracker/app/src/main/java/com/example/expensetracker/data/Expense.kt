@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 enum class Category {
     FOOD, TRANSPORT, AIRTIME_DATA, RENT_UTILITIES, SHOPPING,
-    HEALTH, EDUCATION, ENTERTAINMENT, OTHER
+    HEALTH, EDUCATION, ENTERTAINMENT, PEER_DEBTS, HELB_INCOME, FEES, OTHER
 }
 
 /** Who assigned the category. Logging this lets you measure model accuracy vs. user corrections. */
