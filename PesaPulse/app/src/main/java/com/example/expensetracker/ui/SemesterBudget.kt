@@ -1,7 +1,7 @@
 package com.example.expensetracker.ui
 
 data class SemesterBudgetState(
-    val totalDisbursementMinor: Long = 30_000_00L, // KES 30,000 HELB/HEF semester loan
+    val totalDisbursementMinor: Long = 30_000_00L, // KES 30,000 semester allowance/loan
     val totalSpentMinor: Long = 0L,
     val totalDays: Int = 120, // 4-month semester
     val daysElapsed: Int = 30

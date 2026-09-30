@@ -62,18 +62,6 @@ class TransactionParserTest {
     }
 
     @Test
-    fun testParseHelbDisbursement() = runBlocking {
-        val sms = "QB654321 Confirmed. You have received Ksh 30,000.00 from HIGHER EDUCATION LOANS BOARD on 25/9/26 at 10:00 AM. New M-PESA balance is Ksh 34,708.00."
-        val result = parser.parse(sms)
-
-        assertNotNull(result)
-        assertEquals("QB654321", result?.transactionCode)
-        assertEquals(3000000L, result?.amountMinor)
-        assertEquals(Category.HELB_INCOME, result?.category)
-        assertTrue(result!!.isIncome)
-    }
-
-    @Test
     fun testParseReceivedPeerTransfer() = runBlocking {
         val sms = "QC987654 Confirmed. You have received Ksh 2,500.00 from KEVIN OCHIENG 0712345678 on 27/9/26 at 6:30 PM."
         val result = parser.parse(sms)

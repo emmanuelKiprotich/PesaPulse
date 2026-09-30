@@ -7,7 +7,7 @@ import androidx.room.Index
 
 enum class Category {
     FOOD, TRANSPORT, AIRTIME_DATA, RENT_UTILITIES, SHOPPING,
-    HEALTH, EDUCATION, ENTERTAINMENT, PEER_DEBTS, HELB_INCOME, FEES, OTHER
+    HEALTH, EDUCATION, ENTERTAINMENT, PEER_DEBTS, FEES, OTHER
 }
 
 /** Who assigned the category. Logging this lets you measure model accuracy vs. user corrections. */
@@ -18,7 +18,7 @@ enum class CategorySource { USER, RULES, MODEL }
     indices = [
         Index(value = ["transactionCode"], unique = true),
         Index(value = ["timestamp"]),
-        Index(value = ["merchant", "amountMinor"])
+        Index(value = ["merchant", "amountMinor"]),
     ]
 )
 data class Expense(

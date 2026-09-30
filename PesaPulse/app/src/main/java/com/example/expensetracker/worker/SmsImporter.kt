@@ -11,15 +11,30 @@ import com.example.expensetracker.data.ExpenseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Reads SMS transaction messages directly from the device's Messages app ContentProvider.
+ * Captures M-Pesa, Airtel Money, and all major Kenyan bank transaction alerts.
+ */
 object SmsImporter {
-    suspend fun syncInboxSms(context: Context, repository: ExpenseRepository, categorizer: ExpenseCategorizer): Int = withContext(Dispatchers.IO) {
+
+    suspend fun syncInboxSms(
+        context: Context,
+        repository: ExpenseRepository,
+        categorizer: ExpenseCategorizer
+    ): Int = withContext(Dispatchers.IO) {
         val parser = TransactionParser(categorizer)
         val uri = Uri.parse("content://sms/inbox")
         val projection = arrayOf("body", "date", "address")
-        
+
         var importedCount = 0
         try {
-            val cursor = context.contentResolver.query(uri, projection, null, null, "date DESC LIMIT 150")
+            val cursor = context.contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                "date DESC LIMIT 500"
+            )
             cursor?.use {
                 val bodyCol = it.getColumnIndex("body")
                 val addressCol = it.getColumnIndex("address")
@@ -33,24 +48,25 @@ object SmsImporter {
                     if (isFinancialSenderOrMessage(address, body)) {
                         val parsed = parser.parse(body)
                         if (parsed != null) {
-                            val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode(address, body, parsed.amountMinor)
+                            val code = parsed.transactionCode
+                                ?: TransactionParser.generateDeterministicCode(address, body, parsed.amountMinor)
                             val expense = Expense(
                                 amountMinor = parsed.amountMinor,
                                 currency = parsed.currency,
                                 merchant = parsed.merchant,
                                 category = parsed.category,
                                 categorySource = parsed.source,
-                                note = "Auto-synced from SMS ($address)",
+                                note = "Auto-synced from Messages ($address)",
                                 timestamp = date,
                                 transactionCode = code,
-                                isIncome = parsed.isIncome
+                                isIncome = parsed.isIncome,
                             )
                             val inserted = repository.add(expense)
                             if (inserted) {
                                 importedCount++
                                 if (parsed.feeMinor > 0) {
-                                    val feeCode = "${code}-FEE"
-                                    val providerTag = if (address.contains("airtel", true)) "Airtel Fee" else "M-Pesa Fee"
+                                    val feeCode = "$code-FEE"
+                                    val providerTag = if (address.contains("airtel", ignoreCase = true)) "Airtel Fee" else "M-Pesa Fee"
                                     repository.add(
                                         Expense(
                                             amountMinor = parsed.feeMinor,
@@ -58,10 +74,10 @@ object SmsImporter {
                                             merchant = "[$providerTag]",
                                             category = Category.FEES,
                                             categorySource = CategorySource.RULES,
-                                            note = "Transaction cost / fee",
+                                            note = "Transaction fee",
                                             timestamp = date,
                                             transactionCode = feeCode,
-                                            isIncome = false
+                                            isIncome = false,
                                         )
                                     )
                                 }
@@ -79,15 +95,35 @@ object SmsImporter {
     private fun isFinancialSenderOrMessage(address: String, body: String): Boolean {
         val upperAddress = address.uppercase()
         val lowerBody = body.lowercase()
+
         val isProvider = upperAddress.contains("MPESA") ||
-                         upperAddress.contains("AIRTEL") ||
-                         upperAddress.contains("KCB") ||
-                         upperAddress.contains("EQUITY") ||
-                         upperAddress.contains("CO-OP") ||
-                         upperAddress.contains("ABSA") ||
-                         upperAddress.contains("NCBA") ||
-                         upperAddress.contains("HELB")
-        val hasKeywords = listOf("confirmed", "sent", "paid", "debited", "credited", "ksh", "kes", "balance", "trans. cost", "airtel money", "disbursement").any { it in lowerBody }
+                upperAddress.contains("M-PESA") ||
+                upperAddress.contains("AIRTEL") ||
+                upperAddress.contains("KCB") ||
+                upperAddress.contains("EQUITY") ||
+                upperAddress.contains("CO-OP") ||
+                upperAddress.contains("COOP") ||
+                upperAddress.contains("ABSA") ||
+                upperAddress.contains("NCBA") ||
+                upperAddress.contains("STANBIC") ||
+                upperAddress.contains("DTB") ||
+                upperAddress.contains("FAMILY") ||
+                upperAddress.contains("IMBANK") ||
+                upperAddress.contains("STANCHART") ||
+                upperAddress.contains("FULIZA") ||
+                upperAddress.contains("HUSTLER") ||
+                upperAddress.contains("MSHWARI") ||
+                upperAddress.contains("20807") ||
+                upperAddress.contains("20021") ||
+                upperAddress.contains("22222") ||
+                upperAddress.contains("20033")
+
+        val hasKeywords = listOf(
+            "confirmed", "sent", "paid", "debited", "credited", "ksh", "kes", "usd", "$",
+            "balance", "trans. cost", "airtel money", "disbursement", "received", "bought",
+            "fuliza", "hustler", "mshwari", "kcb mpesa", "withdraw", "deposit", "transfer"
+        ).any { it in lowerBody }
+
         return isProvider || hasKeywords
     }
 }

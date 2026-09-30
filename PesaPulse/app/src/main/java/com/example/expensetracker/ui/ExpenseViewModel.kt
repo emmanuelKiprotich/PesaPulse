@@ -115,7 +115,7 @@ class ExpenseViewModel(
     val aiChatMessages = MutableStateFlow<List<AiChatMessage>>(
         listOf(
             AiChatMessage(
-                message = "👋 Hello! I am PesaPouch AI, your personal financial advisor. Ask me anything about your budget, HELB loans, Fuliza management, or tap below to generate a real-time financial audit!",
+                message = "👋 Hello! I am PesaPouch AI, your personal financial advisor. Ask me anything about your budget, Fuliza management, or tap below to generate a real-time financial audit!",
                 isFromUser = false
             )
         )
@@ -156,9 +156,8 @@ class ExpenseViewModel(
         semesterTotalDays,
         semesterDaysElapsed
     ) { list, customDisb, days, elapsed ->
-        val totalSpent = list.filter { !it.isIncome && it.category != Category.HELB_INCOME }.sumOf { it.amountMinor }
-        val helbIncome = list.filter { it.category == Category.HELB_INCOME }.sumOf { it.amountMinor }
-        val disbursement = if (customDisb != null && customDisb > 0) customDisb else if (helbIncome > 0) helbIncome else 30_000_00L
+        val totalSpent = list.filter { !it.isIncome }.sumOf { it.amountMinor }
+        val disbursement = if (customDisb != null && customDisb > 0) customDisb else 30_000_00L
         SemesterBudgetState(
             totalDisbursementMinor = disbursement,
             totalSpentMinor = totalSpent,
@@ -172,8 +171,8 @@ class ExpenseViewModel(
         mobileLoans,
         baselineAllowanceMinor
     ) { list, loans, baseline ->
-        val totalSpent = list.filter { !it.isIncome && it.category != Category.HELB_INCOME }.sumOf { it.amountMinor }
-        val totalIncome = list.filter { it.isIncome || it.category == Category.HELB_INCOME }.sumOf { it.amountMinor }
+        val totalSpent = list.filter { !it.isIncome }.sumOf { it.amountMinor }
+        val totalIncome = list.filter { it.isIncome }.sumOf { it.amountMinor }
         val activeLoans = loans.filter { !it.isRepaid }.sumOf { it.totalDueMinor }
         BreathingRoomState(
             startingBalanceMinor = baseline,
@@ -560,30 +559,13 @@ class ExpenseViewModel(
         }
     }
 
-    fun simulateHelbDisbursement() {
-        viewModelScope.launch {
-            val code = "HELB-SEM1-DISB"
-            if (repository.getByTransactionCode(code) != null) return@launch
-            repository.add(
-                Expense(
-                    amountMinor = 30_000_00L,
-                    currency = "KES",
-                    merchant = "HELB / HEF Semester Disbursement",
-                    category = Category.HELB_INCOME,
-                    categorySource = CategorySource.RULES,
-                    note = "Lump-sum student loan disbursement",
-                    transactionCode = code,
-                    isIncome = true
-                )
-            )
-        }
-    }
+
 
     fun simulateEmailReceipt() {
         viewModelScope.launch {
             val expense = emailParser.parseEmail(
-                "Your Jumia Order Receipt - #9876",
-                "Total: KES 1,850.00 for Stationery & Books at Jumia Kenya"
+                "Your Naivas Order Receipt - #9876",
+                "Total: KES 1,850.00 for Stationery & Books at Naivas Kenya"
             )
             repository.add(expense)
         }
@@ -611,8 +593,8 @@ class ExpenseViewModel(
 
     fun buildCurrentFinancialContext(): FinancialContext {
         val allExpenses = expenses.value
-        val totalSpent = allExpenses.filter { !it.isIncome && it.category != Category.HELB_INCOME }.sumOf { it.amountMinor }
-        val totalInc = allExpenses.filter { it.isIncome || it.category == Category.HELB_INCOME }.sumOf { it.amountMinor }
+        val totalSpent = allExpenses.filter { !it.isIncome }.sumOf { it.amountMinor }
+        val totalInc = allExpenses.filter { it.isIncome }.sumOf { it.amountMinor }
         val runway = runwayForecast.value
         val topCats = totalsByCategory.value.map { it.category.name to it.total }
         val loans = mobileLoans.value.filter { !it.isRepaid }.map { it.provider to it.principalMinor }

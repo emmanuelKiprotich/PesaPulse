@@ -25,7 +25,7 @@ interface ExpenseDao {
         amountMinor: Long,
         isIncome: Boolean,
         timestamp: Long,
-        windowMs: Long = 180_000L
+        windowMs: Long = 180_000L,
     ): Expense?
 
     @Query("SELECT * FROM expenses ORDER BY timestamp DESC")

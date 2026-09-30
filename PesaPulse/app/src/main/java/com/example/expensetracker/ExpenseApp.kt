@@ -13,7 +13,7 @@ import com.example.expensetracker.worker.SmsSyncWorker
 /** App dependency container with on-device AI ML models. */
 class AppContainer(app: Application) {
     private val db = Room.databaseBuilder(app, AppDatabase::class.java, "expenses.db")
-        .fallbackToDestructiveMigration(true)
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
     val repository = ExpenseRepository(
@@ -22,7 +22,7 @@ class AppContainer(app: Application) {
         chamaGoalDao = db.chamaGoalDao(),
         mobileLoanDao = db.mobileLoanDao(),
         sideHustleDao = db.sideHustleDao(),
-        recurringBillDao = db.recurringBillDao()
+        recurringBillDao = db.recurringBillDao(),
     )
 
     // On-Device NLP Machine Learning Classifier with online adaptation

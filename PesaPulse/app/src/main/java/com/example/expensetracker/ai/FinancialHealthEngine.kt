@@ -9,7 +9,7 @@ data class HealthPillar(
     val name: String,
     val score: Int,
     val maxScore: Int,
-    val summary: String
+    val summary: String,
 )
 
 data class FinancialHealthReport(

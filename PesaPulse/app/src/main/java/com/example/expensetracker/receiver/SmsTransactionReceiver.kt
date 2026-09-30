@@ -49,8 +49,8 @@ class SmsTransactionReceiver : BroadcastReceiver() {
                         )
                         val inserted = app.container.repository.add(expense)
                         if (inserted && parsed.feeMinor > 0) {
-                            val feeCode = "${code}-FEE"
-                            val provider = if (body.contains("airtel", true)) "Airtel Fee" else "M-Pesa Fee"
+                            val feeCode = "$code-FEE"
+                            val provider = if (body.contains("airtel", ignoreCase = true)) "Airtel Fee" else "M-Pesa Fee"
                             app.container.repository.add(
                                 Expense(
                                     amountMinor = parsed.feeMinor,
@@ -61,7 +61,7 @@ class SmsTransactionReceiver : BroadcastReceiver() {
                                     note = "Transaction fee",
                                     timestamp = timestamp,
                                     transactionCode = feeCode,
-                                    isIncome = false
+                                    isIncome = false,
                                 )
                             )
                         }

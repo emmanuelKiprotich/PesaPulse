@@ -1,7 +1,9 @@
 package com.example.expensetracker.ui
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -12,6 +14,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.LaunchedEffect
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +76,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -235,11 +240,13 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
         return if (privacyMode) "KES •••••" else "KES %,.2f".format(amountMinor / 100.0)
     }
 
-    val groupedExpenses = remember(filteredExpenses) {
+    val currentLocale = LocalConfiguration.current.locales[0]
+
+    val groupedExpenses = remember(filteredExpenses, currentLocale) {
         filteredExpenses.groupBy { expense ->
             val netDate = Date(expense.timestamp)
             val now = Date()
-            val sdfDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val sdfDay = SimpleDateFormat("yyyyMMdd", currentLocale)
             val txDay = sdfDay.format(netDate)
             val todayDay = sdfDay.format(now)
             val cal = Calendar.getInstance().apply { time = now; add(Calendar.DAY_OF_YEAR, -1) }
@@ -248,7 +255,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
             when (txDay) {
                 todayDay -> "Today"
                 yesterdayDay -> "Yesterday"
-                else -> SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(netDate)
+                else -> SimpleDateFormat("dd MMM yyyy", currentLocale).format(netDate)
             }
         }
     }
@@ -427,7 +434,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                         formatMoney = { amt -> formatMoney(amt) },
                         onOpenAiSandbox = { showAiSandboxDialog = true }
                     )
-                    2 -> HelbCoachTab(
+                    2 -> SemesterCoachTab(
                         vm = vm,
                         semesterBudget = semesterBudget,
                         financialTips = financialTips,
@@ -573,7 +580,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Category.entries.filter { it != Category.HELB_INCOME }.forEach { c ->
+                        Category.entries.forEach { c ->
                             val isSelected = (chosen ?: suggestion?.category) == c
                             FilterChip(
                                 selected = isSelected,
@@ -738,7 +745,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                     OutlinedTextField(
                         value = tempDisbursement,
                         onValueChange = { tempDisbursement = it },
-                        label = { Text("HELB Disbursement (KES)") },
+                        label = { Text("Semester Allowance / Loan (KES)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -1053,8 +1060,8 @@ private fun SpendingTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("📥 Offline SMS Statement Sync", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("100% offline parsing for M-Pesa & Airtel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("📱 Live Messages App & Notification Reader", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Reads real transactions directly from Messages app & bank alerts", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(
@@ -1062,7 +1069,7 @@ private fun SpendingTab(
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Text("Sync Inbox", fontSize = 12.sp)
+                            Text("Read Messages App", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -1070,10 +1077,8 @@ private fun SpendingTab(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        OutlinedButton(onClick = { vm.simulateMpesaTransaction() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("M-Pesa", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateAirtelTransaction() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Airtel", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateHelbDisbursement() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("HELB", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateEmailReceipt() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Jumia", fontSize = 11.sp) }
+                        OutlinedButton(onClick = onSyncClick, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("🔄 Re-sync Messages", fontSize = 11.sp) }
+                        OutlinedButton(onClick = { vm.simulateEmailReceipt() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("📧 E-Receipt", fontSize = 11.sp) }
                     }
 
                     syncMessage?.let {
@@ -1184,8 +1189,8 @@ private fun AiInsightsTab(
     formatMoney: (Long) -> String,
     onOpenAiSandbox: () -> Unit
 ) {
-    val totalExpensesMinor = allExpenses.filter { !it.isIncome && it.category != Category.HELB_INCOME }.sumOf { it.amountMinor }
-    val totalIncomeMinor = allExpenses.filter { it.isIncome || it.category == Category.HELB_INCOME }.sumOf { it.amountMinor }
+    val totalExpensesMinor = allExpenses.filter { !it.isIncome }.sumOf { it.amountMinor }
+    val totalIncomeMinor = allExpenses.filter { it.isIncome }.sumOf { it.amountMinor }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         // 1. AI Financial Health Score Card
@@ -1378,7 +1383,8 @@ private fun AiInsightsTab(
                     }
 
                     runwayForecast.predictedDepletionDate?.let { date ->
-                        val dateFmt = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(date)
+                        val locale = LocalConfiguration.current.locales[0]
+                        val dateFmt = SimpleDateFormat("dd MMMM yyyy", locale).format(date)
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(10.dp),
@@ -1595,7 +1601,7 @@ private fun AiInsightsTab(
 }
 
 @Composable
-private fun HelbCoachTab(
+private fun SemesterCoachTab(
     vm: ExpenseViewModel,
     semesterBudget: SemesterBudgetState,
     financialTips: List<String>,
@@ -1777,11 +1783,11 @@ private fun HelbCoachTab(
                             Text("📊 Budget Audit", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         Surface(
-                            onClick = { vm.sendAiMessage("How can I stretch my remaining HELB loan to survive through finals week?") },
+                            onClick = { vm.sendAiMessage("How can I stretch my remaining semester allowance to survive through finals week?") },
                             shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            Text("🎓 Stretch HELB", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                            Text("🎓 Stretch Budget", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                         Surface(
                             onClick = { vm.sendAiMessage("Give me a step-by-step strategy to eliminate my mobile loans and avoid Fuliza.") },
@@ -1808,7 +1814,7 @@ private fun HelbCoachTab(
                         OutlinedTextField(
                             value = userQuery,
                             onValueChange = { userQuery = it },
-                            placeholder = { Text("Ask anything about budget, HELB, Fuliza...", fontSize = 12.sp) },
+                            placeholder = { Text("Ask anything about budget, Fuliza...", fontSize = 12.sp) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -1832,7 +1838,7 @@ private fun HelbCoachTab(
             }
         }
 
-        // Card 2: HELB Semester Pacing
+        // Card 2: Semester Budget Pacing
         item {
             Card(
                 Modifier.fillMaxWidth(),
@@ -1846,7 +1852,7 @@ private fun HelbCoachTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("🎓 HELB / HEF Semester Pacing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("🎓 Semester Budget Pacing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("Survive all 120 days until exam week", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.width(8.dp))

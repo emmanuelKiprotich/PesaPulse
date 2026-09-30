@@ -15,12 +15,12 @@ class EmailReceiptParser(private val categorizer: ExpenseCategorizer) {
         val amountMinor = (amountDouble * 100).roundToLong()
 
         val currency = when {
-            combined.contains("KES", true) || combined.contains("Ksh", true) -> "KES"
-            combined.contains("USD", true) || combined.contains("$", true) -> "USD"
+            combined.contains("KES", ignoreCase = true) || combined.contains("Ksh", ignoreCase = true) -> "KES"
+            combined.contains("USD", ignoreCase = true) || combined.contains("$", ignoreCase = true) -> "USD"
             else -> "USD"
         }
 
-        val merchant = if (subject.contains("receipt", true) || subject.contains("order", true)) {
+        val merchant = if (subject.contains("receipt", ignoreCase = true) || subject.contains("order", ignoreCase = true)) {
             subject.replace("Your", "", true).replace("Receipt", "", true).replace("Order", "", true).trim()
         } else {
             "Online Merchant"
@@ -36,7 +36,7 @@ class EmailReceiptParser(private val categorizer: ExpenseCategorizer) {
             categorySource = prediction.source,
             note = "Auto-captured from E-Receipt",
             transactionCode = "EMAIL-${combined.hashCode().toLong() and 0xFFFFFFFFL}",
-            isIncome = false
+            isIncome = false,
         )
     }
 }

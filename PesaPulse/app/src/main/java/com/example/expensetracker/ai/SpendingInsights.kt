@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 data class Anomaly(
     val expense: Expense,
     val zScore: Double,
-    val message: String
+    val message: String,
 )
 
 /**

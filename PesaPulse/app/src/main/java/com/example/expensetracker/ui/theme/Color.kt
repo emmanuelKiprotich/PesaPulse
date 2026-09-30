@@ -38,7 +38,6 @@ fun getCategoryColor(category: Category): Color = when (category) {
     Category.EDUCATION -> Color(0xFF4F46E5)
     Category.ENTERTAINMENT -> Color(0xFFA855F7)
     Category.PEER_DEBTS -> Color(0xFF06B6D4)
-    Category.HELB_INCOME -> Color(0xFF10B981)
     Category.FEES -> Color(0xFF64748B)
     Category.OTHER -> Color(0xFF6B7280)
 }
@@ -53,7 +52,6 @@ fun getCategoryIcon(category: Category): String = when (category) {
     Category.EDUCATION -> "🎓"
     Category.ENTERTAINMENT -> "🎬"
     Category.PEER_DEBTS -> "🤝"
-    Category.HELB_INCOME -> "💰"
     Category.FEES -> "🧾"
     Category.OTHER -> "📦"
 }

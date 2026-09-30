@@ -49,7 +49,7 @@ class RuleBasedCategorizerTest {
     fun testShoppingKeywords() = runBlocking {
         assertEquals(Category.SHOPPING, categorizer.predict("Printing and photocopying").category)
         assertEquals(Category.SHOPPING, categorizer.predict("Stationery and pens").category)
-        assertEquals(Category.SHOPPING, categorizer.predict("Jumia Kenya").category)
+        assertEquals(Category.SHOPPING, categorizer.predict("Stationery and books").category)
     }
 
     @Test

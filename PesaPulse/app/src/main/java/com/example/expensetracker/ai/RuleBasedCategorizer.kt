@@ -11,13 +11,12 @@ class RuleBasedCategorizer : ExpenseCategorizer {
         Category.TRANSPORT to listOf("matatu", "boda", "uber", "bolt", "little cab", "sgr", "stage", "fare", "fuel", "total energies", "rubis", "shell"),
         Category.AIRTIME_DATA to listOf("safaricom", "airtel", "telkom", "airtime", "data bundle", "bundles", "faiba", "kopa kred", "ochi"),
         Category.RENT_UTILITIES to listOf("hostel", "rent", "kplc", "kenya power", "token", "water", "nairobi water", "zuku", "wifi", "caretaker"),
-        Category.SHOPPING to listOf("photocopying", "photocopy", "print", "stationery", "books", "jumia", "kilimall", "mitumba", "clothes"),
+        Category.SHOPPING to listOf("photocopying", "photocopy", "print", "stationery", "books", "kilimall", "mitumba", "clothes"),
         Category.HEALTH to listOf("pharmacy", "hospital", "clinic", "chemist", "sha", "nhif", "dispensary"),
         Category.EDUCATION to listOf("tuition", "school fees", "semester", "exam fee", "library", "lab", "unit registration", "course"),
         Category.ENTERTAINMENT to listOf("netflix", "showmax", "spotify", "cinema", "movie", "bar", "club", "hangout", "chill"),
         Category.PEER_DEBTS to listOf("bill split", "debt", "lent", "borrowed", "send money", "roommate"),
-        Category.HELB_INCOME to listOf("helb", "hef", "board", "disbursement", "allocation", "loan"),
-        Category.FEES to listOf("trans. cost", "transaction cost", "charge", "fee")
+        Category.FEES to listOf("trans. cost", "transaction cost", "charge", "fee"),
     )
 
     override suspend fun predict(merchant: String, note: String): Prediction {

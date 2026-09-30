@@ -6,7 +6,7 @@ import com.example.expensetracker.data.Category
 class HybridCategorizer(
     private val primary: ExpenseCategorizer,
     private val fallback: ExpenseCategorizer,
-    private val confidenceThreshold: Float = 0.50f
+    private val confidenceThreshold: Float = 0.50f,
 ) : ExpenseCategorizer {
 
     override suspend fun predict(merchant: String, note: String): Prediction {

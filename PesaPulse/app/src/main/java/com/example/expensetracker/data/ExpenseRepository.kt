@@ -8,7 +8,7 @@ class ExpenseRepository(
     private val chamaGoalDao: ChamaGoalDao,
     private val mobileLoanDao: MobileLoanDao,
     private val sideHustleDao: SideHustleDao,
-    private val recurringBillDao: RecurringBillDao
+    private val recurringBillDao: RecurringBillDao,
 ) {
     fun observeAll(): Flow<List<Expense>> = expenseDao.observeAll()
     fun observeTotalsByCategory(): Flow<List<CategoryTotal>> = expenseDao.observeTotalsByCategory()

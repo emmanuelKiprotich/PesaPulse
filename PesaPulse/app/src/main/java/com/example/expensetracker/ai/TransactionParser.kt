@@ -14,7 +14,7 @@ data class ParsedTransaction(
     val transactionCode: String? = null,
     val isIncome: Boolean = false,
     val balanceMinor: Long? = null,
-    val rawMerchant: String = ""
+    val rawMerchant: String = "",
 )
 
 class TransactionParser(private val categorizer: ExpenseCategorizer) {
@@ -25,12 +25,22 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
 
         // 1. Transaction Code (e.g. QG789XYZ, QA123456, TXN1234, Ref: FT123)
         val codeRegex = Regex("""\b([A-Z0-9]{8,12})\s+(?:Confirmed|CONFIRMED)\b""", RegexOption.IGNORE_CASE)
-        val codeMatch = codeRegex.find(trimmed)
-        var transactionCode = codeMatch?.groupValues?.get(1)?.uppercase()
+        var transactionCode = codeRegex.find(trimmed)?.groupValues?.get(1)?.uppercase()
 
         if (transactionCode == null) {
             val refRegex = Regex("""(?:Txn\s*ID|Transaction\s*ID|Trans\s*ID|Ref(?:\s*No)?|Reference|Ref\s*Number)[\s:#]+([A-Z0-9\-_]{6,16})""", RegexOption.IGNORE_CASE)
             transactionCode = refRegex.find(trimmed)?.groupValues?.get(1)?.uppercase()
+        }
+
+        if (transactionCode == null) {
+            val startCodeRegex = Regex("""^([A-Z0-9]{8,12})\b""")
+            val startMatch = startCodeRegex.find(trimmed)
+            if (startMatch != null) {
+                val candidate = startMatch.groupValues[1].uppercase()
+                if (candidate.any { it.isLetter() } && candidate.any { it.isDigit() }) {
+                    transactionCode = candidate
+                }
+            }
         }
 
         // 2. Income vs Outgoing Detection
@@ -39,15 +49,18 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
             lower.contains("you have received") ||
             lower.contains("received ksh") ||
             lower.contains("received kes") ||
+            lower.contains("received usd") ||
             lower.contains("credited") ||
             lower.contains("disbursement") ||
             lower.contains("allocation") ||
-            lower.contains("deposited to") -> true
+            lower.contains("deposit of") ||
+            lower.contains("deposited to") ||
+            lower.contains("salary") ||
+            lower.contains("refund") -> true
             else -> false
         }
 
         // 3. Amount Extraction
-        // Handles "Ksh 1,450.00", "Ksh1450.00", "KES 850.00", "KES850", "$ 15.00"
         val amountRegex = Regex(
             """(?:KES|Ksh|USD|\$|EUR|GBP)\s*([\d,]+(?:\.\d{1,2})?)|\b([\d,]+\.\d{2})\b""",
             RegexOption.IGNORE_CASE
@@ -94,6 +107,9 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
             lower.contains("co-op") || lower.contains("cooperative") -> "Co-op Bank"
             lower.contains("absa") -> "Absa Bank"
             lower.contains("ncba") -> "NCBA Bank"
+            lower.contains("stanbic") -> "Stanbic Bank"
+            lower.contains("dtb") -> "DTB Bank"
+            lower.contains("family bank") -> "Family Bank"
             lower.contains("fuliza") -> "Fuliza M-Pesa"
             else -> "M-Pesa"
         }
@@ -104,7 +120,7 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
                 "$providerTag Airtime"
             }
             isIncome -> {
-                val fromRegex = Regex("""(?:from)\s+([A-Za-z0-9\s&'-]+?)(?:\s+on|\s+via|\s+Bal|\s+Account|\.|\n|$)""", RegexOption.IGNORE_CASE)
+                val fromRegex = Regex("""from\s+([A-Za-z0-9\s&'-]+?)(?:\s+on|\s+via|\s+Bal|\s+Account|\.|\n|$)""", RegexOption.IGNORE_CASE)
                 val fromMatch = fromRegex.find(trimmed)
                 fromMatch?.groupValues?.get(1)?.trim() ?: "Funds Received"
             }
@@ -115,7 +131,6 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
             }
         }
 
-        // Clean up merchant name (remove trailing numbers/phone numbers if attached)
         val cleanMerchant = rawMerchant
             .replace(Regex("""\b0\d{9}\b"""), "")
             .replace(Regex("""\b254\d{9}\b"""), "")
@@ -125,9 +140,7 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
         val displayMerchant = "[$providerTag] $cleanMerchant"
 
         // 8. Category Prediction
-        val prediction = if (isIncome && (cleanMerchant.contains("HELB", true) || cleanMerchant.contains("HIGHER EDUCATION", true) || lower.contains("helb"))) {
-            Prediction(Category.HELB_INCOME, 0.99f, CategorySource.RULES)
-        } else if (isIncome) {
+        val prediction = if (isIncome) {
             Prediction(Category.OTHER, 0.70f, CategorySource.RULES)
         } else {
             categorizer.predict(cleanMerchant, trimmed)
@@ -143,7 +156,7 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
             transactionCode = transactionCode,
             isIncome = isIncome,
             balanceMinor = balanceMinor,
-            rawMerchant = cleanMerchant
+            rawMerchant = cleanMerchant,
         )
     }
 

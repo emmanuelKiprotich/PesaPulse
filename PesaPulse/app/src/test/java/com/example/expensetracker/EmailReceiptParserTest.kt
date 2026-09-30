@@ -20,14 +20,14 @@ class EmailReceiptParserTest {
     }
 
     @Test
-    fun testParseJumiaReceipt() = runBlocking {
-        val subject = "Your Jumia Order Receipt - #9876"
-        val body = "Thank you for shopping on Jumia Kenya! Total: KES 1,850.00 for Stationery & Books."
+    fun testParseKilimallReceipt() = runBlocking {
+        val subject = "Your Kilimall Order Receipt - #9876"
+        val body = "Thank you for shopping on Kilimall Kenya! Total: KES 1,850.00 for Stationery & Books."
         val expense = emailParser.parseEmail(subject, body)
 
         assertEquals(185000L, expense.amountMinor)
         assertEquals("KES", expense.currency)
-        assertTrue(expense.merchant.contains("Jumia"))
+        assertTrue(expense.merchant.contains("Kilimall"))
         assertEquals(Category.SHOPPING, expense.category)
         assertFalse(expense.isIncome)
         assertTrue(expense.transactionCode != null)

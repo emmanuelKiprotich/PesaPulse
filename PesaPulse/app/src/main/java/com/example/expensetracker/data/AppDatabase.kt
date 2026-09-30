@@ -10,7 +10,7 @@ import androidx.room.RoomDatabase
         ChamaGoal::class,
         MobileLoan::class,
         SideHustleTransaction::class,
-        RecurringBill::class
+        RecurringBill::class,
     ],
     version = 5,
     exportSchema = false

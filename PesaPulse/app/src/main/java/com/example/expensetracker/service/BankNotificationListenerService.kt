@@ -47,7 +47,7 @@ class BankNotificationListenerService : NotificationListenerService() {
                     )
                     val inserted = app.container.repository.add(expense)
                     if (inserted && parsed.feeMinor > 0) {
-                        val feeCode = "${code}-FEE"
+                        val feeCode = "$code-FEE"
                         app.container.repository.add(
                             Expense(
                                 amountMinor = parsed.feeMinor,
@@ -58,7 +58,7 @@ class BankNotificationListenerService : NotificationListenerService() {
                                 note = "Transaction fee from notification",
                                 timestamp = sbn.postTime,
                                 transactionCode = feeCode,
-                                isIncome = false
+                                isIncome = false,
                             )
                         )
                     }

@@ -6,13 +6,13 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 data class ScannedReceipt(
     val merchant: String?,
     val totalMinor: Long?,
     val rawText: String,
-    val dateText: String? = null
+    val dateText: String? = null,
 )
 
 /** On-device receipt OCR using ML Kit. Pass a Bitmap from the camera or gallery picker. */
@@ -20,7 +20,7 @@ class ReceiptScanner {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     suspend fun scan(bitmap: Bitmap): ScannedReceipt {
-        val text = suspendCoroutine<String> { cont ->
+        val text = suspendCancellableCoroutine { cont ->
             recognizer.process(InputImage.fromBitmap(bitmap, 0))
                 .addOnSuccessListener { cont.resume(it.text) }
                 .addOnFailureListener { cont.resumeWithException(it) }

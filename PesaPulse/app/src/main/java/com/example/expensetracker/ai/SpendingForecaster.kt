@@ -21,7 +21,7 @@ data class RunwayForecast(
     val trend: BurnTrend,
     val regressionSlope: Double,          // Linear slope (spending rate change per day)
     val rSquared: Double,                 // Fit confidence of linear regression model (0..1)
-    val message: String
+    val message: String,
 )
 
 /**
@@ -31,7 +31,7 @@ data class RunwayForecast(
  *   y = m * x + c
  * where x is time in days and y is daily cumulative spend.
  *
- * Forecasts the exact calendar depletion date when the student's liquid upkeep/HELB fund
+ * Forecasts the exact calendar depletion date when the student's liquid upkeep fund
  * will hit zero KES, and computes the required target burn rate to safely survive until semester or month end.
  */
 object SpendingForecaster {

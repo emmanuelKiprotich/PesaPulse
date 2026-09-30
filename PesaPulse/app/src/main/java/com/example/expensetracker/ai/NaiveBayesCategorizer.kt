@@ -261,7 +261,7 @@ class NaiveBayesCategorizer(context: Context? = null) : ExpenseCategorizer {
             // SHOPPING
             Triple("Stationery & Printing Cyber", "Project spiral binding and photocopy", Category.SHOPPING),
             Triple("Gikomba Mitumba", "Second hand thrift clothes and sneakers", Category.SHOPPING),
-            Triple("Jumia Online", "Phone charger case and earphones", Category.SHOPPING),
+            Triple("Naivas Online", "Phone charger case and earphones", Category.SHOPPING),
             Triple("Kilimall Kenya", "Laptop stand and wireless mouse", Category.SHOPPING),
             Triple("Bata Shoe Store", "Official shoes and school bag", Category.SHOPPING),
             Triple("Campus Bookshop", "Engineering mathematics textbook", Category.SHOPPING),
@@ -296,11 +296,6 @@ class NaiveBayesCategorizer(context: Context? = null) : ExpenseCategorizer {
             Triple("Kevin Classmate", "Borrow cash for lunch lent last week", Category.PEER_DEBTS),
             Triple("Mercy Student", "Returned borrowed cash semester books", Category.PEER_DEBTS),
             Triple("Hostel Group Bill Split", "Electricity contribution refund", Category.PEER_DEBTS),
-
-            // HELB INCOME
-            Triple("HELB Kenya", "Higher Education Loans Board upkeep disbursement", Category.HELB_INCOME),
-            Triple("HEF Fund", "Higher Education Funding scholarship upkeep stipend", Category.HELB_INCOME),
-            Triple("Government Bursary", "County student bursary grant allowance", Category.HELB_INCOME),
 
             // FEES
             Triple("Safaricom M-Pesa Charges", "Paybill transaction cost tariff fee", Category.FEES),
