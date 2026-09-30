@@ -19,6 +19,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -255,8 +257,8 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                 tonalElevation = 8.dp
             ) {
                 val navItems = listOf(
-                    Triple(0, "💸", "Spending"),
-                    Triple(1, "🧠", "AI Insights"),
+                    Triple(0, "💸", "Spend"),
+                    Triple(1, "🧠", "Insights"),
                     Triple(2, "🎓", "HELB"),
                     Triple(3, "🤝", "Chama"),
                     Triple(4, "💼", "Hustle"),
@@ -266,8 +268,17 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                     NavigationBarItem(
                         selected = selectedNavTab == index,
                         onClick = { selectedNavTab = index },
-                        icon = { Text(icon, fontSize = 20.sp) },
-                        label = { Text(label, fontSize = 11.sp, fontWeight = if (selectedNavTab == index) FontWeight.Bold else FontWeight.Normal) },
+                        icon = { Text(icon, fontSize = 18.sp) },
+                        label = {
+                            Text(
+                                label,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (selectedNavTab == index) FontWeight.Bold else FontWeight.Medium
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PesaGreen,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -302,36 +313,55 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
                                         Brush.linearGradient(listOf(PesaGreen, Color(0xFF042F2E)))
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("🇰🇪", fontSize = 20.sp)
+                                Text("🇰🇪", fontSize = 18.sp)
                             }
-                            Column {
-                                Text("PesaPulse", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
-                                Text("Campus Financial Intelligence", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "PesaPulse",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    "Campus Financial Intelligence",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             FilterChip(
                                 selected = privacyMode,
                                 onClick = { privacyMode = !privacyMode },
-                                label = { Text(if (privacyMode) "🔒" else "👁️", fontSize = 14.sp) },
-                                shape = RoundedCornerShape(20.dp),
+                                label = { Text(if (privacyMode) "🔒" else "👁️", fontSize = 13.sp) },
+                                shape = CircleShape,
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
@@ -356,7 +386,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
             }
 
             // Body Content based on Navigation Tab
-            Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp)) {
                 when (selectedNavTab) {
                     0 -> SpendingTab(
                         vm = vm,
@@ -453,7 +483,8 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
             Column(
                 Modifier
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp),
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
@@ -938,17 +969,17 @@ private fun SpendingTab(
 
                         // Mini metrics row
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column {
+                            Column(Modifier.weight(1f)) {
                                 Text("Inflow", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                                Text("+${formatMoney(breathingRoom.totalIncomeMinor)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
+                                Text("+${formatMoney(breathingRoom.totalIncomeMinor)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Column {
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Spent", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                                Text("-${formatMoney(breathingRoom.totalSpentMinor)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("-${formatMoney(breathingRoom.totalSpentMinor)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Column {
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                                 Text("Mobile Loans", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                                Text(formatMoney(breathingRoom.totalActiveLoansMinor), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5))
+                                Text(formatMoney(breathingRoom.totalActiveLoansMinor), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -969,14 +1000,15 @@ private fun SpendingTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("📥 Offline SMS Statement Sync", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                            Text("100% offline parsing for M-Pesa & Airtel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("📥 Offline SMS Statement Sync", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("100% offline parsing for M-Pesa & Airtel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = onSyncClick,
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text("Sync Inbox", fontSize = 12.sp)
                         }
@@ -986,10 +1018,10 @@ private fun SpendingTab(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        OutlinedButton(onClick = { vm.simulateMpesaTransaction() }, shape = RoundedCornerShape(8.dp)) { Text("M-Pesa", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateAirtelTransaction() }, shape = RoundedCornerShape(8.dp)) { Text("Airtel", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateHelbDisbursement() }, shape = RoundedCornerShape(8.dp)) { Text("HELB", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateEmailReceipt() }, shape = RoundedCornerShape(8.dp)) { Text("Jumia", fontSize = 11.sp) }
+                        OutlinedButton(onClick = { vm.simulateMpesaTransaction() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("M-Pesa", fontSize = 11.sp) }
+                        OutlinedButton(onClick = { vm.simulateAirtelTransaction() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Airtel", fontSize = 11.sp) }
+                        OutlinedButton(onClick = { vm.simulateHelbDisbursement() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("HELB", fontSize = 11.sp) }
+                        OutlinedButton(onClick = { vm.simulateEmailReceipt() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("Jumia", fontSize = 11.sp) }
                     }
 
                     syncMessage?.let {
@@ -1040,14 +1072,14 @@ private fun SpendingTab(
                     FilterChip(
                         selected = categoryFilter == null,
                         onClick = { vm.categoryFilter.value = null },
-                        label = { Text("All (${allExpenses.size})", fontSize = 12.sp) },
+                        label = { Text("All (${allExpenses.size})", fontSize = 11.sp) },
                         shape = RoundedCornerShape(10.dp)
                     )
                     Category.entries.forEach { cat ->
                         FilterChip(
                             selected = categoryFilter == cat,
                             onClick = { vm.categoryFilter.value = if (categoryFilter == cat) null else cat },
-                            label = { Text("${getCategoryIcon(cat)} ${cat.pretty()}", fontSize = 12.sp) },
+                            label = { Text("${getCategoryIcon(cat)} ${cat.pretty()}", fontSize = 11.sp) },
                             shape = RoundedCornerShape(10.dp)
                         )
                     }
@@ -1117,10 +1149,23 @@ private fun AiInsightsTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("🧠 AI Financial Health Index", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(healthReport.status, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "🧠 AI Financial Health Index",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                healthReport.status,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
+                        Spacer(Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = when (healthReport.grade) {
@@ -1133,7 +1178,7 @@ private fun AiInsightsTab(
                             Text(
                                 "Grade ${healthReport.grade}",
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 color = when (healthReport.grade) {
                                     "A+", "A" -> Color(0xFF047857)
                                     "B" -> Color(0xFF1D4ED8)
@@ -1181,7 +1226,7 @@ private fun AiInsightsTab(
                             verticalAlignment = Alignment.Top
                         ) {
                             Text("💡", fontSize = 20.sp)
-                            Column {
+                            Column(Modifier.weight(1f)) {
                                 Text("AI Dynamic Recommendation", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 Text(healthReport.dynamicAiRecommendation, fontSize = 12.sp, lineHeight = 16.sp)
                             }
@@ -1193,8 +1238,20 @@ private fun AiInsightsTab(
                     healthReport.pillars.forEach { pillar ->
                         val ratio = if (pillar.maxScore > 0) pillar.score.toFloat() / pillar.maxScore else 0f
                         Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(pillar.name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    pillar.name,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text("${pillar.score}/${pillar.maxScore} pts", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             Spacer(Modifier.height(3.dp))
@@ -1222,7 +1279,15 @@ private fun AiInsightsTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("📈 Predictive Budget Runway", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "📈 Predictive Budget Runway",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = when (runwayForecast.trend) {
@@ -1250,13 +1315,13 @@ private fun AiInsightsTab(
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text("Current Daily Burn", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                            Text(formatMoney(runwayForecast.dailyBurnRateMinor), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text(formatMoney(runwayForecast.dailyBurnRateMinor), fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Column(horizontalAlignment = Alignment.End) {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text("Safe Target Limit", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-                            Text(formatMoney(runwayForecast.targetSafeDailyLimitMinor), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PesaGreen)
+                            Text(formatMoney(runwayForecast.targetSafeDailyLimitMinor), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PesaGreen, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
 
@@ -1269,7 +1334,7 @@ private fun AiInsightsTab(
                         ) {
                             Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("⏳", fontSize = 18.sp)
-                                Column {
+                                Column(Modifier.weight(1f)) {
                                     Text("Projected Depletion Date", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
                                     Text("$dateFmt (${runwayForecast.daysOfRunwayRemaining} days runway)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
@@ -1305,7 +1370,7 @@ private fun AiInsightsTab(
                         ) {
                             Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("✅", fontSize = 18.sp)
-                                Text("Zero anomalies detected. All spending conforms to expected Gaussian category distributions.", fontSize = 12.sp)
+                                Text("Zero anomalies detected. All spending conforms to expected Gaussian category distributions.", fontSize = 12.sp, modifier = Modifier.weight(1f))
                             }
                         }
                     } else {
@@ -1317,7 +1382,7 @@ private fun AiInsightsTab(
                             ) {
                                 Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("⚠️", fontSize = 18.sp)
-                                    Column {
+                                    Column(Modifier.weight(1f)) {
                                         Text(anom.message, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                                         Text("Deviation: ${"%.1f".format(anom.zScore)}σ • Amount: ${formatMoney(anom.expense.amountMinor)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                     }
@@ -1387,7 +1452,7 @@ private fun AiInsightsTab(
                         ) {
                             Column(Modifier.padding(12.dp)) {
                                 Text("Total Inflow", style = MaterialTheme.typography.labelSmall, color = MoneyIncome)
-                                Text(formatMoney(totalIncomeMinor), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MoneyIncome)
+                                Text(formatMoney(totalIncomeMinor), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MoneyIncome, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
 
@@ -1398,7 +1463,7 @@ private fun AiInsightsTab(
                         ) {
                             Column(Modifier.padding(12.dp)) {
                                 Text("Total Outflow", style = MaterialTheme.typography.labelSmall, color = MoneyExpense)
-                                Text(formatMoney(totalExpensesMinor), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MoneyExpense)
+                                Text(formatMoney(totalExpensesMinor), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MoneyExpense, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -1431,10 +1496,21 @@ private fun AiInsightsTab(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
                                         Text(getCategoryIcon(catTotal.category), fontSize = 16.sp)
-                                        Text(catTotal.category.pretty(), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        Text(
+                                            catTotal.category.pretty(),
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
+                                    Spacer(Modifier.width(8.dp))
                                     Text(
                                         "${formatMoney(catTotal.total)} (${(pct * 100).toInt()}%)",
                                         fontSize = 12.sp,
@@ -1477,27 +1553,28 @@ private fun HelbCoachTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("🎓 HELB / HEF Semester Pacing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("Survive all 120 days until exam week", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("🎓 HELB / HEF Semester Pacing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Survive all 120 days until exam week", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        OutlinedButton(onClick = onAdjustClick, shape = RoundedCornerShape(10.dp)) {
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedButton(onClick = onAdjustClick, shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
                             Text("⚙️ Adjust", fontSize = 12.sp)
                         }
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text("Loan Disbursed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                            Text(formatMoney(semesterBudget.totalDisbursementMinor), fontWeight = FontWeight.Bold)
+                            Text(formatMoney(semesterBudget.totalDisbursementMinor), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Column {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Total Spent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                            Text(formatMoney(semesterBudget.totalSpentMinor), fontWeight = FontWeight.Bold)
+                            Text(formatMoney(semesterBudget.totalSpentMinor), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Column {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text("Remaining", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                            Text(formatMoney(semesterBudget.remainingMinor), fontWeight = FontWeight.Bold, color = PesaGreen)
+                            Text(formatMoney(semesterBudget.remainingMinor), fontWeight = FontWeight.Bold, color = PesaGreen, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
 
@@ -1519,17 +1596,19 @@ private fun HelbCoachTab(
                     HorizontalDivider(Modifier.padding(vertical = 4.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text("Safe Daily Spend:", style = MaterialTheme.typography.labelSmall)
-                            Text("${formatMoney(semesterBudget.dailyBudgetRecommendedMinor)} / day", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("${formatMoney(semesterBudget.dailyBudgetRecommendedMinor)} / day", fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Column {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text("Actual Daily Burn:", style = MaterialTheme.typography.labelSmall)
                             Text(
                                 "${formatMoney(semesterBudget.currentDailyBurnRateMinor)} / day",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
-                                color = if (semesterBudget.isPacingWell) PesaGreen else MoneyExpense
+                                color = if (semesterBudget.isPacingWell) PesaGreen else MoneyExpense,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -1653,8 +1732,13 @@ private fun ChamaLoansTab(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(goal.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.width(8.dp))
                         Text("📅 ${goal.deadline}", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                     }
                     LinearProgressIndicator(
@@ -1737,8 +1821,13 @@ private fun ChamaLoansTab(
                 )
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${loan.provider} Facility", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${loan.provider} Facility", fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.width(8.dp))
                         Surface(
                             color = if (loan.isRepaid) PesaGreen.copy(alpha = 0.15f) else MoneyExpense.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(10.dp)
@@ -1847,11 +1936,11 @@ private fun SideHustleTab(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("📊 Business Profit & Loss", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Revenue: ${formatMoney(totalRev)}", fontSize = 13.sp)
-                        Text("Costs: ${formatMoney(totalExp)}", fontSize = 13.sp)
+                        Text("Revenue: ${formatMoney(totalRev)}", fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Costs: ${formatMoney(totalExp)}", fontSize = 13.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Net Profit: ${formatMoney(netProfit)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (netProfit >= 0) PesaGreen else MoneyExpense)
+                        Text("Net Profit: ${formatMoney(netProfit)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (netProfit >= 0) PesaGreen else MoneyExpense, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("Margin: $marginPct%", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -1870,8 +1959,8 @@ private fun SideHustleTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(tx.businessName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(tx.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                        Text(tx.businessName, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(tx.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
@@ -1974,12 +2063,12 @@ private fun BillsDebtsTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(bill.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(bill.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("Due every month on day ${bill.dueDayOfMonth}", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                         Text(formatMoney(bill.amountMinor), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Row {
-                        OutlinedButton(onClick = { vm.payRecurringBill(bill) }, shape = RoundedCornerShape(8.dp)) {
+                        OutlinedButton(onClick = { vm.payRecurringBill(bill) }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
                             Text("Pay & Record", fontSize = 11.sp)
                         }
                         TextButton(onClick = { vm.deleteRecurringBill(bill) }) { Text("Delete", fontSize = 11.sp) }
@@ -1998,14 +2087,16 @@ private fun BillsDebtsTab(
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("🤝 Peer Debts & Bill Splits", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("They Owe You: ${formatMoney(owedToMeTotal)}", fontSize = 13.sp)
-                        Text("You Owe: ${formatMoney(iOweTotal)}", fontSize = 13.sp)
+                        Text("They Owe You: ${formatMoney(owedToMeTotal)}", fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("You Owe: ${formatMoney(iOweTotal)}", fontSize = 13.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(
                         if (netPeerBalance >= 0) "Net: +${formatMoney(netPeerBalance)} (You are owed)" else "Net: -${formatMoney(-netPeerBalance)} (You owe)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = if (netPeerBalance >= 0) PesaGreen else MoneyExpense
+                        color = if (netPeerBalance >= 0) PesaGreen else MoneyExpense,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -2073,15 +2164,19 @@ private fun BillsDebtsTab(
                         Text(
                             "${debt.peerName} (${if (debt.isOwedToMe) "Owes You" else "You Owe"})",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             formatMoney(debt.amountMinor),
                             fontWeight = FontWeight.Bold,
                             color = if (debt.isOwedToMe) PesaGreen else MoneyExpense
                         )
                     }
-                    Text(debt.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                    Text(debt.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text("Status: ${if (debt.isSettled) "Settled ✅" else "Pending ⏳"}", fontSize = 11.sp)
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -2101,7 +2196,8 @@ private fun BillsDebtsTab(
                                     }
                                     context.startActivity(Intent.createChooser(shareIntent, "Send Reminder"))
                                 },
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text("💬 WhatsApp", fontSize = 11.sp)
                             }
@@ -2140,21 +2236,24 @@ private fun ModernExpenseRow(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 // Circular Category Avatar
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(catColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(catIcon, fontSize = 20.sp)
+                    Text(catIcon, fontSize = 18.sp)
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         expense.merchant,
                         style = MaterialTheme.typography.bodyMedium,
@@ -2162,12 +2261,18 @@ private fun ModernExpenseRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
                             expense.category.pretty(),
                             fontSize = 11.sp,
                             color = catColor,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         Text("•", fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
                         Text(dateStr, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
@@ -2202,12 +2307,16 @@ private fun ModernExpenseRow(
                 }
             }
 
+            Spacer(Modifier.width(8.dp))
+
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "${if (expense.isIncome) "+" else "-"}${formatMoney(expense.amountMinor)}",
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 14.sp,
-                    color = if (expense.isIncome) MoneyIncome else MaterialTheme.colorScheme.onSurface
+                    color = if (expense.isIncome) MoneyIncome else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     "Delete",
@@ -2226,13 +2335,13 @@ private fun ModernExpenseRow(
 private fun IconButtonBox(emoji: String, tooltip: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(34.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(emoji, fontSize = 16.sp)
+        Text(emoji, fontSize = 15.sp)
     }
 }
 
