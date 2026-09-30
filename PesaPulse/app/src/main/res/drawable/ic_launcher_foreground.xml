@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Shield Ring -->
+    <path
+        android:pathData="M54,22 C36.33,22 22,36.33 22,54 C22,71.67 36.33,86 54,86 C71.67,86 86,71.67 86,54 C86,36.33 71.67,22 54,22 Z"
+        android:strokeWidth="3"
+        android:strokeColor="#059669" />
+
+    <!-- Pulse Wave Line intersecting through center -->
+    <path
+        android:pathData="M26,54 L38,54 L44,38 L51,68 L58,45 L63,58 L68,54 L82,54"
+        android:strokeWidth="4"
+        android:strokeColor="#34D399"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Glowing Node Dots -->
+    <path
+        android:pathData="M44,38 A2.5,2.5 0 1,1 43.99,38"
+        android:fillColor="#A7F3D0" />
+    <path
+        android:pathData="M51,68 A2.5,2.5 0 1,1 50.99,68"
+        android:fillColor="#A7F3D0" />
+    <path
+        android:pathData="M58,45 A3,3 0 1,1 57.99,45"
+        android:fillColor="#6EE7B7" />
+</vector>
