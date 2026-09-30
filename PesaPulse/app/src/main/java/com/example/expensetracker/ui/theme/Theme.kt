@@ -61,7 +61,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun PesaPulseTheme(
+fun PesaPouchTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

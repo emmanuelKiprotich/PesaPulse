@@ -23,7 +23,7 @@ import kotlin.math.max
  */
 class NaiveBayesCategorizer(context: Context? = null) : ExpenseCategorizer {
 
-    private val prefs = context?.getSharedPreferences("pesapulse_ai_model", Context.MODE_PRIVATE)
+    private val prefs = context?.getSharedPreferences("pesapouch_ai_model", Context.MODE_PRIVATE)
 
     // Token frequency count: category -> (token -> count)
     private val tokenCounts = mutableMapOf<Category, MutableMap<String, Int>>()

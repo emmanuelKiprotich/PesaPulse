@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -40,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -126,6 +128,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
     val aiSandboxScores by vm.aiSandboxScores.collectAsStateWithLifecycle()
     val suggestion by vm.suggestion.collectAsStateWithLifecycle()
     val financialTips = vm.financialTips
+    val duplicateCount by vm.potentialDuplicateCount.collectAsStateWithLifecycle()
 
     var showAiSandboxDialog by remember { mutableStateOf(false) }
     var sandboxQuery by remember { mutableStateOf("") }
@@ -259,7 +262,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                 val navItems = listOf(
                     Triple(0, "💸", "Spend"),
                     Triple(1, "🧠", "Insights"),
-                    Triple(2, "🎓", "HELB"),
+                    Triple(2, "🤖", "AI Coach"),
                     Triple(3, "🤝", "Chama"),
                     Triple(4, "💼", "Hustle"),
                     Triple(5, "📅", "Bills")
@@ -337,7 +340,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "PesaPulse",
+                                    "PesaPouch",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1,
@@ -369,6 +372,13 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                             IconButtonBox(emoji = "📷", tooltip = "Scan Receipt") {
                                 imagePickerLauncher.launch("image/*")
                             }
+                            if (duplicateCount > 0) {
+                                IconButtonBox(emoji = "🧹", tooltip = "Clean $duplicateCount Duplicates") {
+                                    vm.cleanDuplicateTransactions { count ->
+                                        syncMessage = "Cleaned $count duplicate transactions"
+                                    }
+                                }
+                            }
                             IconButtonBox(emoji = "⚡", tooltip = "Parse Text") {
                                 showPasteDialog = true
                             }
@@ -398,6 +408,12 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                         searchQuery = searchQuery,
                         categoryFilter = categoryFilter,
                         syncMessage = syncMessage,
+                        duplicateCount = duplicateCount,
+                        onCleanDuplicates = {
+                            vm.cleanDuplicateTransactions { count ->
+                                syncMessage = "Cleaned $count duplicate transactions"
+                            }
+                        },
                         formatMoney = { amt -> formatMoney(amt) },
                         onSyncClick = { permissionLauncher.launch(android.Manifest.permission.READ_SMS) }
                     )
@@ -412,6 +428,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                         onOpenAiSandbox = { showAiSandboxDialog = true }
                     )
                     2 -> HelbCoachTab(
+                        vm = vm,
                         semesterBudget = semesterBudget,
                         financialTips = financialTips,
                         formatMoney = { amt -> formatMoney(amt) },
@@ -886,6 +903,8 @@ private fun SpendingTab(
     searchQuery: String,
     categoryFilter: Category?,
     syncMessage: String?,
+    duplicateCount: Int,
+    onCleanDuplicates: () -> Unit,
     formatMoney: (Long) -> String,
     onSyncClick: () -> Unit
 ) {
@@ -981,6 +1000,39 @@ private fun SpendingTab(
                                 Text("Mobile Loans", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                                 Text(formatMoney(breathingRoom.totalActiveLoansMinor), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Duplicate Transactions Banner
+        if (duplicateCount > 0) {
+            item {
+                Surface(
+                    color = Color(0xFFFEF3C7),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚠️", fontSize = 18.sp)
+                            Column {
+                                Text("Duplicate Transactions Detected", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF92400E))
+                                Text("$duplicateCount potential duplicate(s) found.", fontSize = 11.sp, color = Color(0xFF78350F))
+                            }
+                        }
+                        Button(
+                            onClick = onCleanDuplicates,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("🧹 Clean", fontSize = 11.sp, color = Color.White)
                         }
                     }
                 }
@@ -1386,6 +1438,15 @@ private fun AiInsightsTab(
                                         Text(anom.message, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                                         Text("Deviation: ${"%.1f".format(anom.zScore)}σ • Amount: ${formatMoney(anom.expense.amountMinor)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                                     }
+                                    if (anom.message.contains("duplicate", ignoreCase = true)) {
+                                        OutlinedButton(
+                                            onClick = { vm.delete(anom.expense) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("Delete", fontSize = 11.sp, color = MoneyExpense)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1535,12 +1596,243 @@ private fun AiInsightsTab(
 
 @Composable
 private fun HelbCoachTab(
+    vm: ExpenseViewModel,
     semesterBudget: SemesterBudgetState,
     financialTips: List<String>,
     formatMoney: (Long) -> String,
     onAdjustClick: () -> Unit
 ) {
+    val geminiApiKey by vm.geminiApiKey.collectAsStateWithLifecycle()
+    val isAiLoading by vm.isAiLoading.collectAsStateWithLifecycle()
+    val aiChatMessages by vm.aiChatMessages.collectAsStateWithLifecycle()
+    var userQuery by remember { mutableStateOf("") }
+    var showApiKeyDialog by remember { mutableStateOf(false) }
+    var tempKeyInput by remember { mutableStateOf(geminiApiKey) }
+
+    if (showApiKeyDialog) {
+        AlertDialog(
+            onDismissRequest = { showApiKeyDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🔑", fontSize = 20.sp)
+                    Text("Gemini AI Setup", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Enter your Google Gemini API key to activate cloud generative AI responses. If left empty, PesaPouch Edge AI operates 100% offline.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    OutlinedTextField(
+                        value = tempKeyInput,
+                        onValueChange = { tempKeyInput = it },
+                        placeholder = { Text("AIzaSy...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    if (geminiApiKey.isNotBlank()) {
+                        TextButton(
+                            onClick = {
+                                tempKeyInput = ""
+                                vm.setGeminiApiKey("")
+                                showApiKeyDialog = false
+                            }
+                        ) {
+                            Text("Clear Stored Key", color = MoneyExpense)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        vm.setGeminiApiKey(tempKeyInput)
+                        showApiKeyDialog = false
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Save Key")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApiKeyDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // AI Financial Coach Interactive Card
+        item {
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                            Text("🤖", fontSize = 24.sp)
+                            Column {
+                                Text("PesaPouch AI Advisor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (geminiApiKey.isNotBlank()) "⚡ Gemini 2.5 Flash Online" else "🧠 Edge AI On-Device",
+                                    fontSize = 11.sp,
+                                    color = if (geminiApiKey.isNotBlank()) PesaGreen else MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    tempKeyInput = geminiApiKey
+                                    showApiKeyDialog = true
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(if (geminiApiKey.isNotBlank()) "🔑 Key ✓" else "🔑 Key", fontSize = 11.sp)
+                            }
+                            Button(
+                                onClick = { vm.requestAiFinancialAudit() },
+                                shape = RoundedCornerShape(10.dp),
+                                enabled = !isAiLoading,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("✨ Audit", fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+                    // Conversation History
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        aiChatMessages.takeLast(6).forEach { msg ->
+                            val isUser = msg.isFromUser
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(
+                                        topStart = 14.dp,
+                                        topEnd = 14.dp,
+                                        bottomStart = if (isUser) 14.dp else 2.dp,
+                                        bottomEnd = if (isUser) 2.dp else 14.dp
+                                    ),
+                                    color = if (isUser) PesaGreen else MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.widthIn(max = 280.dp)
+                                ) {
+                                    Text(
+                                        text = msg.message,
+                                        fontSize = 12.sp,
+                                        color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (isAiLoading) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(6.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = PesaGreen
+                                )
+                                Text("PesaPouch AI is analyzing your finances...", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                    }
+
+                    // Quick Prompt Chips
+                    Text("💡 Quick AI Advice:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            onClick = { vm.sendAiMessage("Run a comprehensive financial health audit and tell me my biggest spending leak.") },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text("📊 Budget Audit", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                        Surface(
+                            onClick = { vm.sendAiMessage("How can I stretch my remaining HELB loan to survive through finals week?") },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text("🎓 Stretch HELB", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                        Surface(
+                            onClick = { vm.sendAiMessage("Give me a step-by-step strategy to eliminate my mobile loans and avoid Fuliza.") },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text("🚨 Clear Mobile Debt", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                        Surface(
+                            onClick = { vm.sendAiMessage("How do I structure a weekly campus Chama goal with my friends?") },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text("🤝 Chama Strategy", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                    }
+
+                    // Query Input Field
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = userQuery,
+                            onValueChange = { userQuery = it },
+                            placeholder = { Text("Ask anything about budget, HELB, Fuliza...", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                if (userQuery.isNotBlank()) {
+                                    val text = userQuery
+                                    userQuery = ""
+                                    vm.sendAiMessage(text)
+                                }
+                            },
+                            enabled = userQuery.isNotBlank() && !isAiLoading,
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Text("Send", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Card 2: HELB Semester Pacing
         item {
             Card(
                 Modifier.fillMaxWidth(),
@@ -1631,6 +1923,7 @@ private fun HelbCoachTab(
             }
         }
 
+        // Card 3: Financial Literacy Tips
         item {
             Card(
                 Modifier.fillMaxWidth(),

@@ -3,6 +3,8 @@ package com.example.expensetracker.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+import androidx.room.Index
+
 enum class Category {
     FOOD, TRANSPORT, AIRTIME_DATA, RENT_UTILITIES, SHOPPING,
     HEALTH, EDUCATION, ENTERTAINMENT, PEER_DEBTS, HELB_INCOME, FEES, OTHER
@@ -11,7 +13,14 @@ enum class Category {
 /** Who assigned the category. Logging this lets you measure model accuracy vs. user corrections. */
 enum class CategorySource { USER, RULES, MODEL }
 
-@Entity(tableName = "expenses")
+@Entity(
+    tableName = "expenses",
+    indices = [
+        Index(value = ["transactionCode"], unique = true),
+        Index(value = ["timestamp"]),
+        Index(value = ["merchant", "amountMinor"])
+    ]
+)
 data class Expense(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val amountMinor: Long,              // store money as integer minor units (cents)

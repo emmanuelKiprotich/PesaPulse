@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         SideHustleTransaction::class,
         RecurringBill::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

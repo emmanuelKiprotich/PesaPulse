@@ -33,40 +33,34 @@ class BankNotificationListenerService : NotificationListenerService() {
                 val parser = TransactionParser(app.container.categorizer)
                 val parsed = parser.parse(combined)
                 if (parsed != null) {
-                    val code = parsed.transactionCode ?: "NOTIF-${sbn.postTime}-${parsed.amountMinor}"
-                    if (app.container.repository.getByTransactionCode(code) != null) {
-                        return@launch
-                    }
-                    app.container.repository.add(
-                        Expense(
-                            amountMinor = parsed.amountMinor,
-                            currency = parsed.currency,
-                            merchant = parsed.merchant,
-                            category = parsed.category,
-                            categorySource = parsed.source,
-                            note = "Auto-captured from notification (${sbn.packageName})",
-                            timestamp = sbn.postTime,
-                            transactionCode = code,
-                            isIncome = parsed.isIncome
-                        )
+                    val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode(sbn.packageName, combined, parsed.amountMinor)
+                    val expense = Expense(
+                        amountMinor = parsed.amountMinor,
+                        currency = parsed.currency,
+                        merchant = parsed.merchant,
+                        category = parsed.category,
+                        categorySource = parsed.source,
+                        note = "Auto-captured from notification (${sbn.packageName})",
+                        timestamp = sbn.postTime,
+                        transactionCode = code,
+                        isIncome = parsed.isIncome
                     )
-                    if (parsed.feeMinor > 0) {
+                    val inserted = app.container.repository.add(expense)
+                    if (inserted && parsed.feeMinor > 0) {
                         val feeCode = "${code}-FEE"
-                        if (app.container.repository.getByTransactionCode(feeCode) == null) {
-                            app.container.repository.add(
-                                Expense(
-                                    amountMinor = parsed.feeMinor,
-                                    currency = parsed.currency,
-                                    merchant = "[Bank Fee]",
-                                    category = Category.FEES,
-                                    categorySource = CategorySource.RULES,
-                                    note = "Transaction fee from notification",
-                                    timestamp = sbn.postTime,
-                                    transactionCode = feeCode,
-                                    isIncome = false
-                                )
+                        app.container.repository.add(
+                            Expense(
+                                amountMinor = parsed.feeMinor,
+                                currency = parsed.currency,
+                                merchant = "[Bank Fee]",
+                                category = Category.FEES,
+                                categorySource = CategorySource.RULES,
+                                note = "Transaction fee from notification",
+                                timestamp = sbn.postTime,
+                                transactionCode = feeCode,
+                                isIncome = false
                             )
-                        }
+                        )
                     }
                 }
             }

@@ -31,44 +31,39 @@ class SmsTransactionReceiver : BroadcastReceiver() {
             for (sms in messages) {
                 val body = sms.messageBody ?: continue
                 val sender = sms.originatingAddress ?: ""
+                val timestamp = if (sms.timestampMillis > 0) sms.timestampMillis else System.currentTimeMillis()
                 if (isFinancialMessage(body)) {
                     val parsed = parser.parse(body)
                     if (parsed != null) {
-                        val code = parsed.transactionCode ?: "LIVE-SMS-${System.currentTimeMillis()}-${parsed.amountMinor}"
-                        if (app.container.repository.getByTransactionCode(code) != null) {
-                            continue
-                        }
-                        app.container.repository.add(
-                            Expense(
-                                amountMinor = parsed.amountMinor,
-                                currency = parsed.currency,
-                                merchant = parsed.merchant,
-                                category = parsed.category,
-                                categorySource = parsed.source,
-                                note = "Auto-captured from SMS ($sender)",
-                                timestamp = System.currentTimeMillis(),
-                                transactionCode = code,
-                                isIncome = parsed.isIncome
-                            )
+                        val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode(sender, body, parsed.amountMinor)
+                        val expense = Expense(
+                            amountMinor = parsed.amountMinor,
+                            currency = parsed.currency,
+                            merchant = parsed.merchant,
+                            category = parsed.category,
+                            categorySource = parsed.source,
+                            note = "Auto-captured from SMS ($sender)",
+                            timestamp = timestamp,
+                            transactionCode = code,
+                            isIncome = parsed.isIncome
                         )
-                        if (parsed.feeMinor > 0) {
+                        val inserted = app.container.repository.add(expense)
+                        if (inserted && parsed.feeMinor > 0) {
                             val feeCode = "${code}-FEE"
-                            if (app.container.repository.getByTransactionCode(feeCode) == null) {
-                                val provider = if (body.contains("airtel", true)) "Airtel Fee" else "M-Pesa Fee"
-                                app.container.repository.add(
-                                    Expense(
-                                        amountMinor = parsed.feeMinor,
-                                        currency = parsed.currency,
-                                        merchant = "[$provider]",
-                                        category = Category.FEES,
-                                        categorySource = CategorySource.RULES,
-                                        note = "Transaction fee",
-                                        timestamp = System.currentTimeMillis(),
-                                        transactionCode = feeCode,
-                                        isIncome = false
-                                    )
+                            val provider = if (body.contains("airtel", true)) "Airtel Fee" else "M-Pesa Fee"
+                            app.container.repository.add(
+                                Expense(
+                                    amountMinor = parsed.feeMinor,
+                                    currency = parsed.currency,
+                                    merchant = "[$provider]",
+                                    category = Category.FEES,
+                                    categorySource = CategorySource.RULES,
+                                    note = "Transaction fee",
+                                    timestamp = timestamp,
+                                    transactionCode = feeCode,
+                                    isIncome = false
                                 )
-                            }
+                            )
                         }
                     }
                 }

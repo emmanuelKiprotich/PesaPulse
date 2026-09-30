@@ -23,10 +23,15 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return null
 
-        // 1. Transaction Code (e.g. QG789XYZ, QA123456, TXN1234)
+        // 1. Transaction Code (e.g. QG789XYZ, QA123456, TXN1234, Ref: FT123)
         val codeRegex = Regex("""\b([A-Z0-9]{8,12})\s+(?:Confirmed|CONFIRMED)\b""", RegexOption.IGNORE_CASE)
         val codeMatch = codeRegex.find(trimmed)
-        val transactionCode = codeMatch?.groupValues?.get(1)?.uppercase()
+        var transactionCode = codeMatch?.groupValues?.get(1)?.uppercase()
+
+        if (transactionCode == null) {
+            val refRegex = Regex("""(?:Txn\s*ID|Transaction\s*ID|Trans\s*ID|Ref(?:\s*No)?|Reference|Ref\s*Number)[\s:#]+([A-Z0-9\-_]{6,16})""", RegexOption.IGNORE_CASE)
+            transactionCode = refRegex.find(trimmed)?.groupValues?.get(1)?.uppercase()
+        }
 
         // 2. Income vs Outgoing Detection
         val lower = trimmed.lowercase()
@@ -140,5 +145,13 @@ class TransactionParser(private val categorizer: ExpenseCategorizer) {
             balanceMinor = balanceMinor,
             rawMerchant = cleanMerchant
         )
+    }
+
+    companion object {
+        fun generateDeterministicCode(sourceOrSender: String, text: String, amountMinor: Long): String {
+            val normalized = (sourceOrSender.trim().uppercase() + ":" + text.trim().replace(Regex("""\s+"""), " ")).lowercase()
+            val hash = (normalized.hashCode().toLong() and 0xFFFFFFFFL)
+            return "DET-$hash-$amountMinor"
+        }
     }
 }

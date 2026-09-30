@@ -13,7 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.expensetracker.ui.ExpenseScreen
 import com.example.expensetracker.ui.ExpenseViewModel
 
-import com.example.expensetracker.ui.theme.PesaPulseTheme
+import com.example.expensetracker.ui.theme.PesaPouchTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         val container = (application as ExpenseApp).container
 
         setContent {
-            PesaPulseTheme {
+            PesaPouchTheme {
                 val vm: ExpenseViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")

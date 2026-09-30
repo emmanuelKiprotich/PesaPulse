@@ -34,12 +34,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.expensetracker.ai.FinancialContext
 import com.example.expensetracker.ai.FinancialHealthEngine
 import com.example.expensetracker.ai.FinancialHealthReport
+import com.example.expensetracker.ai.GeminiFinancialAdvisor
 import com.example.expensetracker.ai.RunwayForecast
 import com.example.expensetracker.ai.SpendingForecaster
 import kotlin.math.max
 import kotlin.math.roundToLong
+
+data class AiChatMessage(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val message: String,
+    val isFromUser: Boolean,
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 class ExpenseViewModel(
     private val repository: ExpenseRepository,
@@ -72,6 +81,45 @@ class ExpenseViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val financialTips = FinancialCoach.tips
+
+    // Potential duplicates tracker
+    val potentialDuplicateCount: StateFlow<Int> = expenses.map { list ->
+        var count = 0
+        val seenCodes = mutableSetOf<String>()
+        val kept = mutableListOf<Expense>()
+        for (e in list.sortedBy { it.timestamp }) {
+            val code = e.transactionCode?.trim()?.ifEmpty { null }
+            if (code != null) {
+                if (seenCodes.contains(code)) {
+                    count++
+                    continue
+                }
+                seenCodes.add(code)
+            }
+            val isDup = kept.any { k ->
+                k.amountMinor == e.amountMinor &&
+                k.isIncome == e.isIncome &&
+                kotlin.math.abs(k.timestamp - e.timestamp) <= 300_000L &&
+                (k.merchant.equals(e.merchant, ignoreCase = true) ||
+                 k.merchant.contains(e.merchant, ignoreCase = true) ||
+                 e.merchant.contains(k.merchant, ignoreCase = true))
+            }
+            if (isDup) count++ else kept.add(e)
+        }
+        count
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    // Gemini & On-Device AI Financial Advisor State
+    val geminiApiKey = MutableStateFlow("")
+    val isAiLoading = MutableStateFlow(false)
+    val aiChatMessages = MutableStateFlow<List<AiChatMessage>>(
+        listOf(
+            AiChatMessage(
+                message = "👋 Hello! I am PesaPouch AI, your personal financial advisor. Ask me anything about your budget, HELB loans, Fuliza management, or tap below to generate a real-time financial audit!",
+                isFromUser = false
+            )
+        )
+    )
 
     // Search & Filter
     val searchQuery = MutableStateFlow("")
@@ -180,7 +228,7 @@ class ExpenseViewModel(
 
     fun updateExpenseCategory(expense: Expense, newCategory: Category) {
         viewModelScope.launch {
-            repository.add(
+            repository.update(
                 expense.copy(
                     category = newCategory,
                     categorySource = CategorySource.USER
@@ -277,8 +325,8 @@ class ExpenseViewModel(
 
     fun addParsedTransaction(parsed: ParsedTransaction): Boolean {
         viewModelScope.launch {
-            val code = parsed.transactionCode ?: "MANUAL-PARSE-${System.currentTimeMillis()}"
-            repository.add(
+            val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode("MANUAL", parsed.merchant + ":" + parsed.rawMerchant, parsed.amountMinor)
+            val inserted = repository.add(
                 Expense(
                     amountMinor = parsed.amountMinor,
                     currency = parsed.currency,
@@ -290,7 +338,7 @@ class ExpenseViewModel(
                     isIncome = parsed.isIncome
                 )
             )
-            if (parsed.feeMinor > 0) {
+            if (inserted && parsed.feeMinor > 0) {
                 repository.add(
                     Expense(
                         amountMinor = parsed.feeMinor,
@@ -304,7 +352,9 @@ class ExpenseViewModel(
                     )
                 )
             }
-            categorizer.train(parsed.merchant, "", parsed.category)
+            if (inserted) {
+                categorizer.train(parsed.merchant, "", parsed.category)
+            }
         }
         return true
     }
@@ -545,6 +595,89 @@ class ExpenseViewModel(
 
     fun clearAllExpenses() {
         viewModelScope.launch { repository.clearAllExpenses() }
+    }
+
+    fun cleanDuplicateTransactions(onResult: (Int) -> Unit = {}) {
+        viewModelScope.launch {
+            val removed = repository.deduplicateExpenses()
+            onResult(removed)
+        }
+    }
+
+    // AI Financial Advisor & Gemini Integration
+    fun setGeminiApiKey(key: String) {
+        geminiApiKey.value = key.trim()
+    }
+
+    fun buildCurrentFinancialContext(): FinancialContext {
+        val allExpenses = expenses.value
+        val totalSpent = allExpenses.filter { !it.isIncome && it.category != Category.HELB_INCOME }.sumOf { it.amountMinor }
+        val totalInc = allExpenses.filter { it.isIncome || it.category == Category.HELB_INCOME }.sumOf { it.amountMinor }
+        val runway = runwayForecast.value
+        val topCats = totalsByCategory.value.map { it.category.name to it.total }
+        val loans = mobileLoans.value.filter { !it.isRepaid }.map { it.provider to it.principalMinor }
+        val chamas = chamaGoals.value.map { it.title to it.currentSavedMinor }
+        val sem = semesterBudgetState.value
+
+        return FinancialContext(
+            totalSpentMinor = totalSpent,
+            totalIncomeMinor = totalInc,
+            netBalanceMinor = totalInc - totalSpent,
+            dailyBurnMinor = runway.dailyBurnRateMinor,
+            safeDailyLimitMinor = runway.targetSafeDailyLimitMinor,
+            daysOfRunwayRemaining = runway.daysOfRunwayRemaining,
+            burnTrend = runway.trend.name,
+            topCategories = topCats,
+            unpaidLoans = loans,
+            chamaGoals = chamas,
+            anomaliesCount = anomalies.value.size,
+            semesterDaysRemaining = sem.daysRemaining,
+            recommendedDailyBudgetMinor = sem.dailyBudgetRecommendedMinor
+        )
+    }
+
+    fun sendAiMessage(prompt: String) {
+        val trimmed = prompt.trim()
+        if (trimmed.isBlank()) return
+        val userMsg = AiChatMessage(message = trimmed, isFromUser = true)
+        aiChatMessages.value = aiChatMessages.value + userMsg
+        isAiLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                val ctx = buildCurrentFinancialContext()
+                val reply = GeminiFinancialAdvisor.getFinancialAdvice(geminiApiKey.value, ctx, trimmed)
+                aiChatMessages.value = aiChatMessages.value + AiChatMessage(message = reply, isFromUser = false)
+            } catch (e: Exception) {
+                aiChatMessages.value = aiChatMessages.value + AiChatMessage(
+                    message = "⚠️ Could not generate advice: ${e.localizedMessage ?: "Unknown error"}",
+                    isFromUser = false
+                )
+            } finally {
+                isAiLoading.value = false
+            }
+        }
+    }
+
+    fun requestAiFinancialAudit() {
+        val userMsg = AiChatMessage(message = "Run comprehensive financial audit & recommendations", isFromUser = true)
+        aiChatMessages.value = aiChatMessages.value + userMsg
+        isAiLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                val ctx = buildCurrentFinancialContext()
+                val reply = GeminiFinancialAdvisor.getFinancialAdvice(geminiApiKey.value, ctx, null)
+                aiChatMessages.value = aiChatMessages.value + AiChatMessage(message = reply, isFromUser = false)
+            } catch (e: Exception) {
+                aiChatMessages.value = aiChatMessages.value + AiChatMessage(
+                    message = "⚠️ Could not generate audit: ${e.localizedMessage ?: "Unknown error"}",
+                    isFromUser = false
+                )
+            } finally {
+                isAiLoading.value = false
+            }
+        }
     }
 
     // CSV Generation for Export

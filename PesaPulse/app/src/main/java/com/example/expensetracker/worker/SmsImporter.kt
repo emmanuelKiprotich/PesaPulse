@@ -33,28 +33,23 @@ object SmsImporter {
                     if (isFinancialSenderOrMessage(address, body)) {
                         val parsed = parser.parse(body)
                         if (parsed != null) {
-                            val code = parsed.transactionCode ?: "SMS-${date}-${parsed.amountMinor}"
-                            // Deduplication check: skip if already present
-                            if (repository.getByTransactionCode(code) != null) {
-                                continue
-                            }
-
-                            repository.add(
-                                Expense(
-                                    amountMinor = parsed.amountMinor,
-                                    currency = parsed.currency,
-                                    merchant = parsed.merchant,
-                                    category = parsed.category,
-                                    categorySource = parsed.source,
-                                    note = "Auto-synced from SMS ($address)",
-                                    timestamp = date,
-                                    transactionCode = code,
-                                    isIncome = parsed.isIncome
-                                )
+                            val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode(address, body, parsed.amountMinor)
+                            val expense = Expense(
+                                amountMinor = parsed.amountMinor,
+                                currency = parsed.currency,
+                                merchant = parsed.merchant,
+                                category = parsed.category,
+                                categorySource = parsed.source,
+                                note = "Auto-synced from SMS ($address)",
+                                timestamp = date,
+                                transactionCode = code,
+                                isIncome = parsed.isIncome
                             )
-                            if (parsed.feeMinor > 0) {
-                                val feeCode = "${code}-FEE"
-                                if (repository.getByTransactionCode(feeCode) == null) {
+                            val inserted = repository.add(expense)
+                            if (inserted) {
+                                importedCount++
+                                if (parsed.feeMinor > 0) {
+                                    val feeCode = "${code}-FEE"
                                     val providerTag = if (address.contains("airtel", true)) "Airtel Fee" else "M-Pesa Fee"
                                     repository.add(
                                         Expense(
@@ -71,7 +66,6 @@ object SmsImporter {
                                     )
                                 }
                             }
-                            importedCount++
                         }
                     }
                 }
