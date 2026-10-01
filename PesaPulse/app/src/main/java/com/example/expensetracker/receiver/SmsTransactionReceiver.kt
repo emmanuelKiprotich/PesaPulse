@@ -35,6 +35,9 @@ class SmsTransactionReceiver : BroadcastReceiver() {
                 if (isFinancialMessage(body)) {
                     val parsed = parser.parse(body)
                     if (parsed != null) {
+                        if (parsed.balanceMinor != null) {
+                            com.example.expensetracker.worker.SmsImporter.saveMpesaBalance(context, parsed.balanceMinor, timestamp)
+                        }
                         val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode(sender, body, parsed.amountMinor)
                         val expense = Expense(
                             amountMinor = parsed.amountMinor,

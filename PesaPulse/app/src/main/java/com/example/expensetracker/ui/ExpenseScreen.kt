@@ -16,6 +16,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import com.example.expensetracker.auth.BiometricAuthManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -130,13 +132,12 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
     val anomalies by vm.anomalies.collectAsStateWithLifecycle()
     val runwayForecast by vm.runwayForecast.collectAsStateWithLifecycle()
     val healthReport by vm.financialHealthReport.collectAsStateWithLifecycle()
-    val aiSandboxScores by vm.aiSandboxScores.collectAsStateWithLifecycle()
     val suggestion by vm.suggestion.collectAsStateWithLifecycle()
     val financialTips = vm.financialTips
     val duplicateCount by vm.potentialDuplicateCount.collectAsStateWithLifecycle()
 
-    var showAiSandboxDialog by remember { mutableStateOf(false) }
-    var sandboxQuery by remember { mutableStateOf("") }
+    val isUnlocked by vm.isUnlocked.collectAsStateWithLifecycle()
+    val syncedMpesaBalance by vm.syncedMpesaBalance.collectAsStateWithLifecycle()
 
     val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
     val categoryFilter by vm.categoryFilter.collectAsStateWithLifecycle()
@@ -155,10 +156,6 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
     var scannedMerchant by remember { mutableStateOf("") }
     var scannedAmount by remember { mutableStateOf("") }
     var scannedCategory by remember { mutableStateOf(Category.SHOPPING) }
-
-    var showPasteDialog by remember { mutableStateOf(false) }
-    var pasteTextContent by remember { mutableStateOf("") }
-    var parsedPreview by remember { mutableStateOf<ParsedTransaction?>(null) }
 
     var showSemesterSettingsDialog by remember { mutableStateOf(false) }
     var tempDisbursement by remember { mutableStateOf("30000") }
@@ -234,6 +231,94 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                 syncMessage = "Error: ${e.message}"
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        vm.refreshMpesaBalance(context)
+        val activity = context as? FragmentActivity
+        if (activity != null && BiometricAuthManager.isBiometricAvailable(context)) {
+            BiometricAuthManager.authenticate(
+                activity = activity,
+                onSuccess = { vm.unlockApp() },
+                onError = { err -> syncMessage = err }
+            )
+        } else {
+            vm.unlockApp()
+        }
+
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
+            vm.syncPhoneSms(context) { count ->
+                if (count > 0) {
+                    syncMessage = "✅ Auto-synced $count real transaction(s) from Messages app!"
+                }
+            }
+        }
+    }
+
+    if (!isUnlocked) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(listOf(PesaGreen, Color(0xFF042F2E)))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🔒", fontSize = 40.sp)
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "PesaPulse Financial Lock",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Authenticate using Fingerprint, Face ID, or PIN to unlock your M-Pesa & financial data",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(28.dp))
+                Button(
+                    onClick = {
+                        val activity = context as? FragmentActivity
+                        if (activity != null) {
+                            BiometricAuthManager.authenticate(
+                                activity = activity,
+                                onSuccess = { vm.unlockApp() },
+                                onError = { err -> syncMessage = err }
+                            )
+                        } else {
+                            vm.unlockApp()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PesaGreen)
+                ) {
+                    Text("🔓 Unlock App", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                syncMessage?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+        return
     }
 
     fun formatMoney(amountMinor: Long): String {
@@ -386,8 +471,8 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                                     }
                                 }
                             }
-                            IconButtonBox(emoji = "⚡", tooltip = "Parse Text") {
-                                showPasteDialog = true
+                            IconButtonBox(emoji = "🔒", tooltip = "Lock App") {
+                                vm.lockApp()
                             }
                             IconButtonBox(emoji = "📤", tooltip = "Export CSV") {
                                 val csv = vm.generateCsv(allExpenses)
@@ -408,6 +493,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                     0 -> SpendingTab(
                         vm = vm,
                         breathingRoom = breathingRoom,
+                        syncedMpesaBalance = syncedMpesaBalance,
                         groupedExpenses = groupedExpenses,
                         filteredExpenses = filteredExpenses,
                         allExpenses = allExpenses,
@@ -422,7 +508,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                             }
                         },
                         formatMoney = { amt -> formatMoney(amt) },
-                        onSyncClick = { permissionLauncher.launch(android.Manifest.permission.READ_SMS) }
+                        onSyncClick = { permissionLauncher.launch(Manifest.permission.READ_SMS) }
                     )
                     1 -> AiInsightsTab(
                         vm = vm,
@@ -431,8 +517,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                         healthReport = healthReport,
                         runwayForecast = runwayForecast,
                         anomalies = anomalies,
-                        formatMoney = { amt -> formatMoney(amt) },
-                        onOpenAiSandbox = { showAiSandboxDialog = true }
+                        formatMoney = { amt -> formatMoney(amt) }
                     )
                     2 -> SemesterCoachTab(
                         vm = vm,
@@ -673,68 +758,6 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
                 TextButton(onClick = { showScanDialog = false }) { Text("Cancel") }
             }
         )
-    }
-
-    // DIALOG: Parse Arbitrary SMS / Email Text
-    if (showPasteDialog) {
-        AlertDialog(
-            onDismissRequest = { showPasteDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("⚡", fontSize = 24.sp)
-                    Text("Parse SMS / Receipt Text")
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Paste any M-Pesa, Airtel Money, Bank SMS, or E-receipt message:", style = MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(
-                        value = pasteTextContent,
-                        onValueChange = {
-                            pasteTextContent = it
-                            vm.parseArbitraryText(it) { res -> parsedPreview = res }
-                        },
-                        placeholder = { Text("e.g. QG789XYZ Confirmed. Ksh 1,450.00 sent to JAVA HOUSE on 29/9/26...") },
-                        modifier = Modifier.fillMaxWidth().height(110.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    parsedPreview?.let { preview ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text("Extracted: ${preview.merchant}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                                Text("Amount: ${formatMoney(preview.amountMinor)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                                if (preview.feeMinor > 0) Text("Fee: ${formatMoney(preview.feeMinor)}", style = MaterialTheme.typography.bodySmall)
-                                Text("Type: ${if (preview.isIncome) "Income 📈" else "Expense 📉"} | Category: ${preview.category.pretty()}", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        parsedPreview?.let {
-                            vm.addParsedTransaction(it)
-                            showPasteDialog = false
-                            pasteTextContent = ""
-                            parsedPreview = null
-                        }
-                    },
-                    enabled = parsedPreview != null,
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Save Transaction")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPasteDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
-
     // DIALOG: Semester Settings
     if (showSemesterSettingsDialog) {
         AlertDialog(
@@ -788,112 +811,8 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
             }
         )
     }
-
-    // AI Model Sandbox Dialog
-    if (showAiSandboxDialog) {
-        AlertDialog(
-            onDismissRequest = { showAiSandboxDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🔬", fontSize = 22.sp)
-                    Text("AI Classifier Sandbox", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "Test the on-device Naive Bayes NLP model with any transaction text or M-Pesa SMS:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    OutlinedTextField(
-                        value = sandboxQuery,
-                        onValueChange = {
-                            sandboxQuery = it
-                            vm.testAiSandbox(it)
-                        },
-                        placeholder = { Text("e.g. Paid KES 450 to Super Metro Stage") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    // Preset quick test chips
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            onClick = {
-                                sandboxQuery = "Mama Mboga sukuma wiki nyanya KES 250"
-                                vm.testAiSandbox(sandboxQuery)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text("Mama Mboga", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
-                        Surface(
-                            onClick = {
-                                sandboxQuery = "Super Metro matatu fare to CBD KES 100"
-                                vm.testAiSandbox(sandboxQuery)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text("Super Metro", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
-                        Surface(
-                            onClick = {
-                                sandboxQuery = "KPLC Prepaid Token 35kWh KES 1000"
-                                vm.testAiSandbox(sandboxQuery)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text("KPLC Token", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
-                        Surface(
-                            onClick = {
-                                sandboxQuery = "KFC Kimathi streetwise 2 KES 550"
-                                vm.testAiSandbox(sandboxQuery)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text("KFC", fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
-                        }
-                    }
-
-                    if (aiSandboxScores.isNotEmpty()) {
-                        Text("Predicted Probability Distribution:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        aiSandboxScores.take(5).forEach { (cat, prob) ->
-                            val catColor = getCategoryColor(cat)
-                            Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("${getCategoryIcon(cat)} ${cat.pretty()}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("${(prob * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = catColor)
-                                }
-                                Spacer(Modifier.height(2.dp))
-                                LinearProgressIndicator(
-                                    progress = { prob.coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = catColor,
-                                    trackColor = catColor.copy(alpha = 0.15f)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAiSandboxDialog = false }) { Text("Close") }
-            }
-        )
+        }
     }
-}
 
 // ==========================================
 // SUB-VIEWS FOR EACH TAB
@@ -903,6 +822,7 @@ fun ExpenseScreen(vm: ExpenseViewModel) {
 private fun SpendingTab(
     vm: ExpenseViewModel,
     breathingRoom: BreathingRoomState,
+    syncedMpesaBalance: Pair<Long?, Long>,
     groupedExpenses: Map<String, List<Expense>>,
     filteredExpenses: List<Expense>,
     allExpenses: List<Expense>,
@@ -1008,6 +928,53 @@ private fun SpendingTab(
                                 Text(formatMoney(breathingRoom.totalActiveLoansMinor), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
+
+                        syncedMpesaBalance.first?.let { balance ->
+                            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = Color.White.copy(alpha = 0.15f))
+                            Surface(
+                                color = Color.White.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("📱 Live Synced M-Pesa Balance", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f), fontWeight = FontWeight.Medium)
+                                    Text("KES %,.2f".format(balance / 100.0), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            val ctx = LocalContext.current
+            if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("🔐", fontSize = 20.sp)
+                            Text("SMS Permission Required for Auto-Sync", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Text(
+                            "PesaPulse reads your M-Pesa & bank messages directly from your device to automatically track expenses and sync your live M-Pesa balance offline. Your data stays 100% private.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Button(
+                            onClick = onSyncClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PesaGreen)
+                        ) {
+                            Text("Grant SMS Permission", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1078,7 +1045,6 @@ private fun SpendingTab(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         OutlinedButton(onClick = onSyncClick, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("🔄 Re-sync Messages", fontSize = 11.sp) }
-                        OutlinedButton(onClick = { vm.simulateEmailReceipt() }, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) { Text("📧 E-Receipt", fontSize = 11.sp) }
                     }
 
                     syncMessage?.let {
@@ -1186,8 +1152,7 @@ private fun AiInsightsTab(
     healthReport: FinancialHealthReport,
     runwayForecast: RunwayForecast,
     anomalies: List<Anomaly>,
-    formatMoney: (Long) -> String,
-    onOpenAiSandbox: () -> Unit
+    formatMoney: (Long) -> String
 ) {
     val totalExpensesMinor = allExpenses.filter { !it.isIncome }.sumOf { it.amountMinor }
     val totalIncomeMinor = allExpenses.filter { it.isIncome }.sumOf { it.amountMinor }
@@ -1488,14 +1453,6 @@ private fun AiInsightsTab(
                         Text("• Computer Vision: Google ML Kit On-Device Text OCR", fontSize = 12.sp)
                         Text("• Forecasting: Ordinary Least Squares (OLS) Linear Trend", fontSize = 12.sp)
                         Text("• Online Learning: Bayesian prior updating on user edits", fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = onOpenAiSandbox,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("🔬 Open AI Classifier Sandbox")
                     }
                 }
             }

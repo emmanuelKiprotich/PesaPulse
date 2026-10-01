@@ -44,6 +44,9 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.5")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
 
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // On-device AI
     implementation("com.google.mlkit:text-recognition:16.0.1")   // receipt OCR
     // implementation("org.tensorflow:tensorflow-lite:2.16.1")   // uncomment for TfliteCategorizer

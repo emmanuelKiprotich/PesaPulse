@@ -19,7 +19,7 @@ object BiometricAuthManager {
     fun authenticate(
         activity: FragmentActivity,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
 
@@ -31,7 +31,7 @@ object BiometricAuthManager {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
-                if (errorCode == BiometricPrompt.ERROR_USER_CANCELED || errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                if ((errorCode == BiometricPrompt.ERROR_USER_CANCELED) || (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON)) {
                     onError("Authentication canceled.")
                 } else {
                     onError(errString.toString())

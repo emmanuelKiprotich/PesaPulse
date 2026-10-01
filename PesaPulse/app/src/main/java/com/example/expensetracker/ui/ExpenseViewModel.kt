@@ -290,9 +290,28 @@ class ExpenseViewModel(
         return true
     }
 
+    // Biometric Security Lock
+    val isUnlocked = MutableStateFlow(false)
+
+    fun unlockApp() {
+        isUnlocked.value = true
+    }
+
+    fun lockApp() {
+        isUnlocked.value = false
+    }
+
+    // Live Synced M-Pesa Balance from Messages App
+    val syncedMpesaBalance = MutableStateFlow<Pair<Long?, Long>>(null to 0L)
+
+    fun refreshMpesaBalance(context: Context) {
+        syncedMpesaBalance.value = SmsImporter.getMpesaBalance(context)
+    }
+
     fun syncPhoneSms(context: Context, onResult: (Int) -> Unit) {
         viewModelScope.launch {
             val count = SmsImporter.syncInboxSms(context, repository, categorizer)
+            refreshMpesaBalance(context)
             onResult(count)
         }
     }
@@ -312,50 +331,6 @@ class ExpenseViewModel(
                 e.printStackTrace()
             }
         }
-    }
-
-    // Direct Text / Clipboard Parse
-    fun parseArbitraryText(text: String, onResult: (ParsedTransaction?) -> Unit) {
-        viewModelScope.launch {
-            val parsed = transactionParser.parse(text)
-            onResult(parsed)
-        }
-    }
-
-    fun addParsedTransaction(parsed: ParsedTransaction): Boolean {
-        viewModelScope.launch {
-            val code = parsed.transactionCode ?: TransactionParser.generateDeterministicCode("MANUAL", parsed.merchant + ":" + parsed.rawMerchant, parsed.amountMinor)
-            val inserted = repository.add(
-                Expense(
-                    amountMinor = parsed.amountMinor,
-                    currency = parsed.currency,
-                    merchant = parsed.merchant,
-                    category = parsed.category,
-                    categorySource = parsed.source,
-                    note = "Parsed from text",
-                    transactionCode = code,
-                    isIncome = parsed.isIncome
-                )
-            )
-            if (inserted && parsed.feeMinor > 0) {
-                repository.add(
-                    Expense(
-                        amountMinor = parsed.feeMinor,
-                        currency = parsed.currency,
-                        merchant = "[Transaction Fee]",
-                        category = Category.FEES,
-                        categorySource = CategorySource.RULES,
-                        note = "Transaction fee",
-                        transactionCode = "${code}-FEE",
-                        isIncome = false
-                    )
-                )
-            }
-            if (inserted) {
-                categorizer.train(parsed.merchant, "", parsed.category)
-            }
-        }
-        return true
     }
 
     // Peer Debts
@@ -484,91 +459,6 @@ class ExpenseViewModel(
     }
     fun deleteRecurringBill(bill: RecurringBill) {
         viewModelScope.launch { repository.deleteRecurringBill(bill) }
-    }
-
-    // Simulators
-    fun simulateMpesaTransaction() {
-        viewModelScope.launch {
-            val code = "QG789XYZ"
-            if (repository.getByTransactionCode(code) != null) return@launch
-            val parsed = transactionParser.parse("QG789XYZ Confirmed. Ksh 1,450.00 sent to JAVA HOUSE RVR on 29/9/26 at 4:15 PM. New balance is Ksh 5,230.00. Transaction cost, Ksh 22.00.")
-            if (parsed != null) {
-                repository.add(
-                    Expense(
-                        amountMinor = parsed.amountMinor,
-                        currency = parsed.currency,
-                        merchant = parsed.merchant,
-                        category = parsed.category,
-                        categorySource = parsed.source,
-                        note = "Automated M-Pesa transaction",
-                        transactionCode = code,
-                        isIncome = false
-                    )
-                )
-                if (parsed.feeMinor > 0) {
-                    repository.add(
-                        Expense(
-                            amountMinor = parsed.feeMinor,
-                            currency = parsed.currency,
-                            merchant = "[M-Pesa Fee]",
-                            category = Category.FEES,
-                            categorySource = CategorySource.RULES,
-                            note = "Transaction fee",
-                            transactionCode = "${code}-FEE",
-                            isIncome = false
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    fun simulateAirtelTransaction() {
-        viewModelScope.launch {
-            val code = "AIRTEL-9871"
-            if (repository.getByTransactionCode(code) != null) return@launch
-            val parsed = transactionParser.parse("Airtel Money confirmed. Sent KES 850.00 to NAIVAS SUPERMARKET. Fee was KES 15.00.")
-            if (parsed != null) {
-                repository.add(
-                    Expense(
-                        amountMinor = parsed.amountMinor,
-                        currency = parsed.currency,
-                        merchant = parsed.merchant,
-                        category = parsed.category,
-                        categorySource = parsed.source,
-                        note = "Automated Airtel Money transaction",
-                        transactionCode = code,
-                        isIncome = false
-                    )
-                )
-                if (parsed.feeMinor > 0) {
-                    repository.add(
-                        Expense(
-                            amountMinor = parsed.feeMinor,
-                            currency = parsed.currency,
-                            merchant = "[Airtel Fee]",
-                            category = Category.FEES,
-                            categorySource = CategorySource.RULES,
-                            note = "Transaction fee",
-                            transactionCode = "${code}-FEE",
-                            isIncome = false
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-
-
-    fun simulateEmailReceipt() {
-        viewModelScope.launch {
-            val expense = emailParser.parseEmail(
-                "Your Naivas Order Receipt - #9876",
-                "Total: KES 1,850.00 for Stationery & Books at Naivas Kenya"
-            )
-            repository.add(expense)
-        }
     }
 
     fun delete(expense: Expense) {

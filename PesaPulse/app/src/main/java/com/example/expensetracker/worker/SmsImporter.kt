@@ -48,6 +48,9 @@ object SmsImporter {
                     if (isFinancialSenderOrMessage(address, body)) {
                         val parsed = parser.parse(body)
                         if (parsed != null) {
+                            if (parsed.balanceMinor != null) {
+                                saveMpesaBalance(context, parsed.balanceMinor, date)
+                            }
                             val code = parsed.transactionCode
                                 ?: TransactionParser.generateDeterministicCode(address, body, parsed.amountMinor)
                             val expense = Expense(
@@ -90,6 +93,25 @@ object SmsImporter {
             e.printStackTrace()
         }
         importedCount
+    }
+
+    fun saveMpesaBalance(context: Context, balanceMinor: Long, timestamp: Long) {
+        val prefs = context.getSharedPreferences("pesapouch_mpesa_balance", Context.MODE_PRIVATE)
+        val currentTs = prefs.getLong("latest_mpesa_balance_timestamp", 0L)
+        if (timestamp >= currentTs) {
+            prefs.edit()
+                .putLong("latest_mpesa_balance_minor", balanceMinor)
+                .putLong("latest_mpesa_balance_timestamp", timestamp)
+                .apply()
+        }
+    }
+
+    fun getMpesaBalance(context: Context): Pair<Long?, Long> {
+        val prefs = context.getSharedPreferences("pesapouch_mpesa_balance", Context.MODE_PRIVATE)
+        if (!prefs.contains("latest_mpesa_balance_minor")) return null to 0L
+        val balance = prefs.getLong("latest_mpesa_balance_minor", 0L)
+        val ts = prefs.getLong("latest_mpesa_balance_timestamp", 0L)
+        return balance to ts
     }
 
     private fun isFinancialSenderOrMessage(address: String, body: String): Boolean {
